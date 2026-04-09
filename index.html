@@ -1,0 +1,2201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Study Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+    // Android WebView / Appgyver status bar safe area fix
+    (function(){
+        var ua = navigator.userAgent || '';
+        var isAndroid = ua.indexOf('Android') > -1;
+        var isWebView = /wv|WebView/i.test(ua) ||
+                        (isAndroid && !/Chrome\/[.0-9]* Mobile/.test(ua)) ||
+                        (typeof window.Android !== 'undefined') ||
+                        (typeof window.AppGyver !== 'undefined');
+        if (isAndroid || isWebView) {
+            document.addEventListener('DOMContentLoaded', function(){
+                try {
+                    var testEl = document.createElement('div');
+                    testEl.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;visibility:hidden;pointer-events:none;';
+                    document.body.appendChild(testEl);
+                    var top = parseInt(window.getComputedStyle(testEl).top) || 0;
+                    testEl.parentNode && testEl.parentNode.removeChild(testEl);
+                    if (top === 0) {
+                        // No CSS safe-area support — apply 24px fallback for Android status bar
+                        document.body.style.paddingTop = '24px';
+                    }
+                } catch(e) {
+                    document.body.style.paddingTop = '24px';
+                }
+            });
+        }
+    })();
+    </script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation; -webkit-touch-callout:none; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none; }
+        img { pointer-events:none; -webkit-user-drag:none; user-drag:none; }
+        html { scroll-behavior:smooth; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+        body { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#000; color:#e5e5e5; min-height:100vh; padding-bottom:calc(64px + env(safe-area-inset-bottom, 0px)); -webkit-font-smoothing:antialiased; overflow-x:hidden; padding-top:0 !important; }
+        .header, .top-bar { padding-top: 0; }
+
+        /* ── NO TOP BAR — floating hamburger only ── */
+        .hamburger-btn { background:none; border:none; color:#fff; font-size:1.3rem; cursor:pointer; padding:4px; display:flex; align-items:center; justify-content:center; min-width:40px; min-height:40px; }
+        .header-action-btn { background:none; border:none; color:#fff; width:44px; height:44px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.3rem; transition:background 0.2s; flex-shrink:0; }
+        .header-action-btn:hover { background:rgba(255,255,255,0.08); }
+
+        /* ── HOME TOP ROW: hamburger + title + plus all inline ── */
+        .home-top { display:flex; align-items:center; padding:16px 16px 0; }
+        .home-top .hamburger-btn { margin-right:4px; }
+
+        /* ── DRAWER ── */
+        .drawer-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:500; opacity:0; visibility:hidden; transition:opacity 0.25s ease, visibility 0.25s ease; will-change:opacity; }
+        .drawer-overlay.open { opacity:1; visibility:visible; }
+        .side-drawer { position:fixed; top:0; left:0; width:280px; height:100%; background:#111; z-index:501; transition:transform 0.25s cubic-bezier(0.4,0,0.2,1); display:flex; flex-direction:column; transform:translate3d(-280px,0,0); will-change:transform; }
+        .side-drawer.open { transform:translate3d(0,0,0); }
+        .drawer-header { padding:calc(env(safe-area-inset-top, 28px) + 16px) 20px 16px; border-bottom:1px solid #222; }
+        .drawer-header h2 { font-size:1.25rem; font-weight:700; color:#fff; }
+        .drawer-header p { font-size:0.8rem; color:#888; margin-top:4px; }
+        .drawer-menu { flex:1; padding:12px 0; }
+        .drawer-menu-item { display:flex; align-items:center; gap:14px; padding:14px 20px; color:#ccc; cursor:pointer; transition:background 0.2s; border:none; background:none; width:100%; text-align:left; font-family:inherit; font-size:0.95rem; min-height:48px; }
+        .drawer-menu-item:hover { background:rgba(255,255,255,0.05); }
+        .drawer-menu-item.active { color:#4fc3f7; background:rgba(79,195,247,0.08); }
+        .drawer-menu-item i { width:22px; text-align:center; }
+        .drawer-footer { padding:16px 20px; border-top:1px solid #222; font-size:0.75rem; color:#555; }
+
+        /* ── HOME ── */
+        .home-main-title { font-size:1.55rem; font-weight:600; color:#fff; flex:1; }
+        .search-container { padding:10px 16px; }
+        .search-wrapper { position:relative; display:flex; align-items:center; }
+        .search-icon { position:absolute; left:14px; color:#555; font-size:0.9rem; pointer-events:none; }
+        .search-bar { width:100%; padding:12px 36px 12px 40px; background:#1c1c1e; border:none; border-radius:12px; color:#e5e5e5; font-size:16px; font-family:inherit; -webkit-appearance:none; appearance:none; }
+        .search-bar:focus { outline:none; }
+        .search-bar::placeholder { color:#555; }
+        .search-clear-btn { position:absolute; right:12px; background:none; border:none; color:#555; font-size:0.85rem; cursor:pointer; display:none; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; transition:color 0.2s; padding:0; }
+        .search-clear-btn:hover { color:#aaa; }
+        .search-clear-btn.visible { display:flex; }
+        .content { padding:8px 16px 16px; }
+        .subjects-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+
+        /* Subject card — match image exactly */
+        .subject-card { background:#1c1c1e; border-radius:14px; overflow:hidden; cursor:pointer; transition:transform 0.12s ease-out; position:relative; user-select:none; -webkit-user-select:none; will-change:transform; contain:layout style; }
+        .subject-card:active { transform:scale3d(0.97,0.97,1); }
+        .subject-image { width:100%; height:130px; object-fit:cover; background:#222; display:block; }
+        .subject-info { padding:10px 12px 13px; }
+        .subject-title { font-size:0.95rem; font-weight:700; color:#fff; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .subject-subtitle { font-size:0.78rem; color:#888; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+        /* Edit/Delete/Drag buttons — hidden by default, shown on long-press */
+        .subject-actions { position:absolute; top:6px; right:6px; display:flex; gap:5px; opacity:0; pointer-events:none; transform:scale3d(0.85,0.85,1); transition:opacity 0.16s ease-out, transform 0.16s ease-out; will-change:transform,opacity; }
+        .subject-card.long-pressed .subject-actions { opacity:1; pointer-events:all; transform:scale3d(1,1,1); }
+        .action-icon { width:36px; height:36px; border-radius:50%; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); border:none; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.8rem; transition:background 0.15s; }
+        .action-icon:hover { background:#4fc3f7; }
+        .action-icon.delete:hover { background:#ef5350; }
+        .action-icon.drag-handle-card { cursor:grab; touch-action:none; }
+        .action-icon.drag-handle-card:active { cursor:grabbing; background:rgba(0,0,0,0.85); }
+        .subject-card.dragging { opacity:0.4; transform:scale(0.96); transition:none; }
+        .subject-card.drag-over { outline:2px solid #4fc3f7; outline-offset:2px; }
+
+        /* ── BOTTOM NAV — matches image ── */
+        .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:#111; border-top:1px solid #1a1a1a; display:flex; justify-content:space-around; align-items:stretch; padding:10px 0; padding-bottom:calc(18px + env(safe-area-inset-bottom, 0px)); z-index:90; transform:translate3d(0,0,0); will-change:transform; }
+        .nav-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#555; cursor:pointer; padding:4px 32px; transition:color 0.15s ease; background:none; border:none; font-family:inherit; min-height:44px; flex:1; max-width:50%; }
+        .nav-item:hover,.nav-item.active { color:#fff; }
+        .nav-item i { font-size:1.4rem; line-height:1; }
+        .nav-item span { font-size:0.65rem; font-weight:500; line-height:1; }
+
+        /* ── MODAL ── */
+        .modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center; padding:16px; }
+        .modal.show { display:flex; }
+        .modal-content { background:#1a1a1a; border-radius:16px; padding:20px; width:100%; max-width:400px; max-height:90vh; overflow-y:auto; border:1px solid #333; animation:modalIn 0.22s cubic-bezier(0.34,1.1,0.64,1) both; -webkit-overflow-scrolling:touch; will-change:transform,opacity; }
+        @keyframes modalIn{from{transform:scale3d(0.93,0.93,1) translate3d(0,10px,0);opacity:0}to{transform:scale3d(1,1,1) translate3d(0,0,0);opacity:1}}
+        @keyframes modalSlide{from{transform:translate3d(0,20px,0);opacity:0}to{transform:translate3d(0,0,0);opacity:1}}
+        .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+        .modal-title { font-size:1.125rem; font-weight:700; color:#fff; }
+        .close-btn { background:none; border:none; color:#888; font-size:1.25rem; cursor:pointer; width:44px; height:44px; display:flex; align-items:center; justify-content:center; border-radius:50%; transition:all 0.2s; }
+        .close-btn:hover { color:#fff; background:rgba(255,255,255,0.08); }
+        .form-group { margin-bottom:16px; }
+        .form-label { display:block; margin-bottom:6px; font-size:0.8rem; font-weight:600; color:#aaa; text-transform:uppercase; letter-spacing:0.5px; }
+        .form-input { width:100%; padding:12px; background:#222; border:1px solid #333; border-radius:8px; color:#e5e5e5; font-size:16px; font-family:inherit; transition:border-color 0.2s; -webkit-appearance:none; appearance:none; }
+        .form-input:focus { outline:none; border-color:#4fc3f7; }
+        .form-input::placeholder { color:#555; }
+        textarea.form-input { min-height:120px; resize:vertical; font-size:16px; }
+        .file-input-wrapper { position:relative; overflow:hidden; }
+        .file-input-label { display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; background:#222; border:1px dashed #444; border-radius:8px; color:#888; cursor:pointer; transition:all 0.2s; font-size:0.9rem; }
+        .file-input-label:hover { border-color:#4fc3f7; color:#4fc3f7; }
+        .file-input { position:absolute; opacity:0; width:100%; height:100%; cursor:pointer; }
+        .preview-image { width:100%; height:150px; object-fit:cover; border-radius:8px; margin-top:8px; }
+        .remove-image-btn { width:100%; padding:10px; margin-top:8px; border:1px solid #ef5350; border-radius:8px; background:transparent; color:#ef5350; font-size:0.85rem; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; font-family:inherit; }
+        .remove-image-btn:hover { background:#ef5350; color:#fff; }
+        .btn { width:100%; padding:14px; border:none; border-radius:8px; font-size:0.95rem; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s; min-height:48px; }
+        .btn-primary { background:#4fc3f7; color:#000; }
+        .btn-primary:hover { background:#29b6f6; }
+        .btn-primary:active { transform:scale3d(0.98,0.98,1); }
+
+        /* ── SUBJECT DETAIL ── */
+        .subject-detail { display:none; }
+        .subject-detail.show { display:block; }
+        .detail-header { background:transparent; padding:16px 16px 0; display:flex; align-items:center; gap:10px; }
+        .back-btn { background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer; padding:4px; display:flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; }
+        .detail-header-title { font-size:1rem; font-weight:700; color:#fff; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .detail-subject-hero { padding:20px 16px 8px; }
+        .detail-subject-name { font-size:1.6rem; font-weight:800; color:#fff; margin-bottom:4px; }
+        .detail-subject-subtitle { font-size:0.85rem; color:#888; }
+        .detail-info-rows { padding:0 16px 8px; }
+        .detail-info-row { display:flex; justify-content:space-between; align-items:center; padding:13px 0; border-bottom:1px solid #1a1a1a; }
+        .detail-info-label { font-size:0.85rem; color:#888; }
+        .detail-info-value { font-size:0.85rem; color:#fff; font-weight:500; }
+
+
+        .detail-materials-section { padding:0 16px; }
+        .detail-materials-header { display:flex; align-items:center; justify-content:space-between; padding:16px 0 10px; }
+        .detail-materials-title { font-size:1.2rem; font-weight:700; color:#fff; }
+        .content-items { display:flex; flex-direction:column; padding-bottom:80px; -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; }
+        .content-item { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+        .content-item:active { background:rgba(255,255,255,0.03); }
+        .content-item-thumb { width:44px; height:44px; border-radius:8px; background:#222; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; }
+        .content-item-thumb img { width:100%; height:100%; object-fit:cover; }
+        .content-item-thumb i { font-size:1.1rem; color:#888; }
+        .content-item-info { flex:1; min-width:0; }
+        .content-item-name { font-size:0.9rem; font-weight:500; color:#fff; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .content-item-meta { font-size:0.72rem; color:#666; text-transform:uppercase; letter-spacing:0.3px; }
+        .content-item-chevron { color:#444; font-size:0.8rem; flex-shrink:0; }
+        .content-item-actions { display:flex; gap:4px; flex-shrink:0; }
+        .content-action-btn { width:40px; height:40px; border-radius:6px; background:transparent !important; border:none; color:#666; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.7rem; transition:color 0.15s ease; -webkit-tap-highlight-color:transparent; outline:none; -webkit-appearance:none; appearance:none; }
+        .content-action-btn:hover { color:#fff; background:rgba(255,255,255,0.08) !important; }
+        .content-action-btn:focus { outline:none; background:transparent !important; color:#666; box-shadow:none; }
+        .content-action-btn:focus:not(:focus-visible) { outline:none; background:transparent !important; color:#666; box-shadow:none; }
+        .content-action-btn:focus-visible { outline:none; background:transparent !important; box-shadow:none; }
+        .content-action-btn:active { background:rgba(255,255,255,0.08) !important; color:#fff; }
+        .content-action-btn.panel-open { color:#4fc3f7; background:transparent !important; }
+        .content-action-btn.delete { color:#666; }
+        .content-action-btn.delete:hover { color:#ef5350; background:transparent !important; }
+        .content-action-btn.delete:focus { color:#666; background:transparent !important; box-shadow:none; }
+
+        /* ── TEXT NOTE INLINE CARD ── */
+        .text-note-card { background:#222; border-radius:14px; padding:16px; margin:8px 0; cursor:pointer; transition:background 0.2s; }
+        .text-note-card:hover { background:#2a2a2a; }
+        .text-note-label { font-size:0.75rem; font-weight:700; color:#4fc3f7; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
+        .text-note-body { font-size:0.9rem; color:#e5e5e5; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+
+        /* ── VIEW TEXT NOTE MODAL ── */
+        .view-text-modal-content { background:#1c1c1c; border-radius:16px; padding:20px; width:100%; max-width:440px; max-height:85vh; overflow-y:auto; border:1px solid #333; animation:modalIn 0.22s cubic-bezier(0.34,1.1,0.64,1) both; -webkit-overflow-scrolling:touch; will-change:transform,opacity; }
+        .view-text-title { font-size:0.75rem; font-weight:700; color:#4fc3f7; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; }
+        .view-text-body { font-size:0.95rem; color:#e5e5e5; line-height:1.7; white-space:pre-wrap; word-break:break-word; }
+
+        .empty-state { text-align:center; padding:48px 16px; color:#555; }
+        .empty-state i { font-size:3rem; margin-bottom:12px; opacity:0.4; }
+        .empty-state p { font-size:0.9rem; margin-bottom:4px; }
+        .content-menu { display:flex; flex-direction:column; gap:6px; }
+        .content-menu-btn { padding:14px; background:#222; border:none; border-radius:10px; color:#e5e5e5; font-size:0.9rem; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:12px; transition:background 0.2s; font-family:inherit; }
+        .content-menu-btn:hover { background:#2a2a2a; }
+        .content-menu-btn i { width:22px; text-align:center; color:#4fc3f7; }
+
+        /* ── MATERIALS VIEW ── */
+        .materials-view { display:none; min-height:100vh; padding-bottom:calc(64px + env(safe-area-inset-bottom, 0px)); -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; }
+        .materials-view.show { display:block; }
+        .materials-header-section { padding:16px 16px 8px; padding-top:calc(env(safe-area-inset-top, 0px) + 16px); }
+        .materials-main-title { font-size:1.55rem; font-weight:600; color:#fff; }
+        .materials-search-row { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+        .materials-search-wrapper { flex:1; position:relative; }
+        .materials-search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#555; font-size:0.85rem; pointer-events:none; }
+        .materials-search { width:100%; padding:12px 14px 12px 38px; background:#1c1c1e; border:none; border-radius:12px; color:#e5e5e5; font-size:16px; font-family:inherit; -webkit-appearance:none; appearance:none; }
+        .materials-search:focus { outline:none; }
+        .materials-search::placeholder { color:#555; }
+        .materials-filter-chips { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+        .materials-filter-chips::-webkit-scrollbar { display:none; }
+        .filter-chip { flex-shrink:0; padding:8px 14px; border-radius:20px; border:1px solid #333; background:#1a1a1a; color:#888; font-size:0.8rem; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s; white-space:nowrap; min-height:36px; display:inline-flex; align-items:center; }
+        .filter-chip:hover { border-color:#555; color:#ccc; }
+        .filter-chip.active { background:#4fc3f7; border-color:#4fc3f7; color:#000; font-weight:600; }
+        .materials-content { padding:0 16px; }
+        .material-section { margin-bottom:2px; }
+        .material-section-header { display:flex; justify-content:space-between; align-items:center; padding:14px 0 8px; }
+        .material-section-title { font-size:0.8rem; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:0.5px; }
+        .add-material-btn { width:32px; height:32px; border-radius:50%; background:#4fc3f7; border:none; color:#000; font-size:0.72rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+        .add-material-btn:hover { background:#29b6f6; }
+        .material-list { display:flex; flex-direction:column; }
+        .material-item { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+        .material-item:last-child { border-bottom:none; }
+        .material-icon { width:40px; height:40px; border-radius:8px; background:#222; display:flex; align-items:center; justify-content:center; color:#888; font-size:1rem; flex-shrink:0; }
+        .material-icon.image { background:#1a3a2a; color:#81c784; }
+        .material-icon.pdf { background:#3a1a1a; color:#e57373; }
+        .material-info { flex:1; min-width:0; }
+        .material-name { font-size:0.85rem; font-weight:500; color:#fff; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .material-meta { font-size:0.7rem; color:#666; }
+        .material-chevron { color:#444; font-size:0.8rem; flex-shrink:0; }
+        .material-actions { display:flex; gap:2px; flex-shrink:0; }
+        .material-action-btn { width:40px; height:40px; border-radius:6px; background:transparent; border:none; color:#555; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.7rem; transition:color 0.15s ease, background 0.15s ease; }
+        .material-action-btn:hover { color:#fff; background:rgba(255,255,255,0.08); }
+        .material-action-btn.delete:hover { color:#ef5350; }
+        .empty-materials { text-align:center; padding:48px 16px; color:#555; }
+        .empty-materials i { font-size:3rem; margin-bottom:12px; opacity:0.3; }
+        .empty-materials p { font-size:0.9rem; margin-bottom:4px; }
+
+        /* ── CONFIRM ── */
+        .confirm-dialog { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.75); z-index:2000; align-items:center; justify-content:center; padding:16px; }
+        .confirm-dialog.show { display:flex; }
+        .confirm-dialog-content { background:#222; border-radius:16px; width:100%; max-width:300px; overflow:hidden; animation:modalIn 0.22s cubic-bezier(0.34,1.1,0.64,1) both; will-change:transform,opacity; }
+        .confirm-dialog-header { padding:20px 16px 12px; text-align:center; }
+        .confirm-dialog-title { font-size:1.05rem; font-weight:700; color:#fff; margin-bottom:6px; }
+        .confirm-dialog-message { font-size:0.85rem; color:#999; line-height:1.4; }
+        .confirm-dialog-actions { display:flex; flex-direction:column; margin-top:12px; }
+        .confirm-dialog-btn { width:100%; padding:14px; background:transparent; border:none; color:#ccc; font-size:0.95rem; font-weight:500; cursor:pointer; transition:background 0.2s; border-top:1px solid #333; font-family:inherit; }
+        .confirm-dialog-btn:hover { background:rgba(255,255,255,0.05); }
+        .confirm-dialog-btn.destructive { color:#ef5350; font-weight:600; }
+
+        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+        @media(max-width:380px){.subjects-grid{gap:8px}.subject-image{height:90px}.home-main-title,.materials-main-title{font-size:1.3rem}}
+
+        .content-item-wrapper.dragging { opacity:0.35; }
+        .content-item-wrapper.drag-over-top { border-top:2px solid #4fc3f7; }
+        .content-item-wrapper.drag-over-bottom { border-bottom:2px solid #4fc3f7; }
+        .drag-handle { cursor:grab; color:#444; padding:0 4px; display:flex; align-items:center; font-size:0.75rem; flex-shrink:0; touch-action:none; min-width:40px; min-height:40px; justify-content:center; }
+        .drag-handle:active { cursor:grabbing; color:#888; }
+
+        /* ── INLINE EDITING STYLES ── */
+        .content-item-wrapper { display:flex; flex-direction:column; }
+        .inline-rename-input { background:#222; border:1px solid #4fc3f7; border-radius:6px; color:#fff; font-size:16px; padding:4px 8px; width:100%; font-family:inherit; outline:none; -webkit-appearance:none; }
+        .text-note-body-inline { font-size:0.85rem; color:#ccc; line-height:1.5; white-space:pre-wrap; word-break:break-word; padding:6px 0; }
+        .text-note-edit-area { width:100%; min-height:90px; background:#222; border:1px solid #4fc3f7; border-radius:8px; color:#e5e5e5; font-size:16px; padding:8px; font-family:inherit; resize:vertical; outline:none; -webkit-appearance:none; }
+        .text-note-edit-actions { display:flex; gap:6px; }
+        .text-save-btn { padding:5px 12px; background:#4fc3f7; border:none; border-radius:6px; color:#000; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:4px; }
+        .text-cancel-btn { padding:5px 12px; background:#333; border:none; border-radius:6px; color:#ccc; font-size:0.8rem; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:4px; }
+        .replace-file-row { padding:6px 0 10px 56px; }
+        .replace-file-label { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; background:#1a1a1a; border:1px dashed #444; border-radius:8px; color:#4fc3f7; font-size:0.78rem; cursor:pointer; transition:all 0.2s; }
+        .replace-file-label:hover { border-color:#4fc3f7; background:#222; }
+        .text-note-inline { padding:4px 0; }
+
+        /* ── EDIT ACTION PANEL (Rename + Replace dropdown) ── */
+        .edit-action-panel { display:none; background:#1a1a1a; border:1px solid #333; border-radius:10px; margin:4px 0 8px 56px; overflow:hidden; }
+        .edit-action-panel.open { display:block; }
+        .edit-panel-btn { width:100%; padding:10px 14px; background:transparent; border:none; border-bottom:1px solid #252525; color:#e5e5e5; font-size:0.85rem; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:10px; transition:background 0.15s; text-align:left; }
+        .edit-panel-btn:last-child { border-bottom:none; }
+        .edit-panel-btn:hover { background:#242424; }
+        .edit-panel-btn i { width:16px; text-align:center; color:#4fc3f7; font-size:0.8rem; }
+        .edit-panel-rename-row { padding:8px 14px 12px; display:none; }
+        .edit-panel-rename-row.show { display:block; }
+        .edit-panel-rename-input { width:100%; padding:8px 10px; background:#222; border:1px solid #4fc3f7; border-radius:7px; color:#fff; font-size:16px; font-family:inherit; outline:none; margin-bottom:8px; -webkit-appearance:none; }
+        .edit-panel-rename-actions { display:flex; gap:6px; }
+        .ep-save-btn { flex:1; padding:7px; background:#4fc3f7; border:none; border-radius:6px; color:#000; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit; }
+        .ep-cancel-btn { padding:7px 12px; background:#2a2a2a; border:none; border-radius:6px; color:#aaa; font-size:0.8rem; cursor:pointer; font-family:inherit; }
+
+        /* ── HEADER ICON ── */
+        .header-icon-wrap { display:flex; align-items:center; justify-content:center; width:36px; height:36px; flex-shrink:0; cursor:pointer; border-radius:10px; overflow:hidden; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+        .header-icon-img { width:36px; height:36px; object-fit:cover; border-radius:10px; display:block; pointer-events:none; -webkit-user-drag:none; user-drag:none; }
+        .header-icon-default { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#4fc3f7 0%,#0288d1 100%); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .header-icon-default i { font-size:1.15rem; color:#fff; pointer-events:none; }
+        #headerIconInput { display:none; }
+
+        /* ── HEADER EDIT POPUP MENU ── */
+        .header-edit-popup { position:fixed; top:0; left:0; right:0; bottom:0; z-index:800; display:none; }
+        .header-edit-popup.open { display:block; }
+        .header-edit-popup-backdrop { position:absolute; top:0; left:0; right:0; bottom:0; }
+        .header-edit-popup-menu { position:absolute; background:#1e1e1e; border-radius:14px; overflow:hidden; min-width:220px; box-shadow:0 8px 32px rgba(0,0,0,0.55); border:1px solid #2a2a2a; animation:popupFadeIn 0.18s cubic-bezier(0.34,1.1,0.64,1) both; will-change:transform,opacity; }
+        @keyframes popupFadeIn { from{opacity:0;transform:scale3d(0.93,0.93,1) translate3d(0,-4px,0)} to{opacity:1;transform:scale3d(1,1,1) translate3d(0,0,0)} }
+        .header-edit-popup-item { display:flex; align-items:center; gap:14px; padding:14px 18px; cursor:pointer; background:none; border:none; width:100%; text-align:left; font-family:inherit; font-size:0.95rem; color:#e5e5e5; transition:background 0.15s; border-bottom:1px solid #2a2a2a; }
+        .header-edit-popup-item:last-child { border-bottom:none; }
+        .header-edit-popup-item:hover, .header-edit-popup-item:active { background:rgba(255,255,255,0.06); }
+        .header-edit-popup-item i { color:#4fc3f7; width:18px; text-align:center; font-size:0.95rem; }
+        .header-edit-popup-item.destructive { color:#ef5350; }
+        .header-edit-popup-item.destructive i { color:#ef5350; }
+
+        /* ── SUBJECT EDIT COMPACT POPUP ── */
+        .subject-edit-popup { position:fixed; top:0; left:0; right:0; bottom:0; z-index:900; display:none; }
+        .subject-edit-popup.open { display:block; }
+        .subject-edit-popup-backdrop { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); }
+        .subject-edit-popup-menu { position:absolute; background:#1e1e1e; border-radius:16px; overflow:hidden; min-width:240px; max-width:300px; box-shadow:0 10px 40px rgba(0,0,0,0.65); border:1px solid #2a2a2a; animation:popupFadeIn 0.18s cubic-bezier(0.34,1.1,0.64,1) both; will-change:transform,opacity; }
+        .subject-edit-popup-item { display:flex; align-items:center; gap:14px; padding:14px 18px; cursor:pointer; background:none; border:none; width:100%; text-align:left; font-family:inherit; font-size:0.93rem; color:#e5e5e5; transition:background 0.15s; border-bottom:1px solid #2a2a2a; position:relative; }
+        .subject-edit-popup-item:last-child { border-bottom:none; }
+        .subject-edit-popup-item:hover, .subject-edit-popup-item:active { background:rgba(255,255,255,0.06); }
+        .subject-edit-popup-item i { width:18px; text-align:center; font-size:0.9rem; color:#4fc3f7; flex-shrink:0; }
+        .subject-edit-popup-item.destructive { color:#ef5350; }
+        .subject-edit-popup-item.destructive i { color:#ef5350; }
+        .subject-edit-popup-item.save-item { color:#4fc3f7; font-weight:600; }
+        .subject-edit-popup-item.save-item i { color:#4fc3f7; }
+        .subject-edit-inline-row { padding:0 18px 12px; display:none; flex-direction:column; gap:6px; }
+        .subject-edit-inline-row.show { display:flex; }
+        .subject-edit-inline-input { width:100%; padding:9px 12px; background:#2a2a2a; border:1px solid #4fc3f7; border-radius:8px; color:#fff; font-size:16px; font-family:inherit; outline:none; -webkit-appearance:none; -webkit-user-select:text; user-select:text; }
+        .subject-edit-inline-actions { display:flex; gap:8px; }
+        .subject-edit-inline-save { flex:1; padding:8px; background:#4fc3f7; border:none; border-radius:7px; color:#000; font-size:0.82rem; font-weight:600; cursor:pointer; font-family:inherit; }
+        .subject-edit-inline-cancel { padding:8px 14px; background:#2a2a2a; border:none; border-radius:7px; color:#aaa; font-size:0.82rem; cursor:pointer; font-family:inherit; }
+        .subject-edit-img-preview { width:100%; height:110px; object-fit:cover; border-radius:8px; display:none; margin-top:4px; }
+        .subject-edit-img-preview.show { display:block; }
+
+        /* ── INLINE INFO ROW EDITING — removed tap-to-edit ── */
+        .detail-info-row { cursor:default; }
+
+        /* ── MATERIAL ACTION POPUP (Copy / Move) ── */
+        .material-action-popup { position:fixed; top:0; left:0; right:0; bottom:0; z-index:950; display:none; }
+        .material-action-popup.open { display:block; }
+        .material-action-popup-backdrop { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.45); }
+        .material-action-popup-menu { position:absolute; background:#1e1e1e; border-radius:16px; overflow:hidden; min-width:200px; max-width:260px; box-shadow:0 10px 40px rgba(0,0,0,0.65); border:1px solid #2a2a2a; animation:popupFadeIn 0.18s cubic-bezier(0.34,1.1,0.64,1) both; will-change:transform,opacity; }
+        .material-action-popup-item { display:flex; align-items:center; gap:14px; padding:14px 18px; cursor:pointer; background:none; border:none; width:100%; text-align:left; font-family:inherit; font-size:0.93rem; color:#e5e5e5; transition:background 0.15s; border-bottom:1px solid #2a2a2a; }
+        .material-action-popup-item:last-child { border-bottom:none; }
+        .material-action-popup-item:hover, .material-action-popup-item:active { background:rgba(255,255,255,0.06); }
+        .material-action-popup-item i { width:18px; text-align:center; font-size:0.9rem; color:#4fc3f7; flex-shrink:0; }
+
+        /* ── CUSTOM SUBJECT SELECTOR MODAL ── */
+        .subject-selector-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.75); z-index:1100; align-items:flex-end; justify-content:center; padding:0; }
+        .subject-selector-modal.show { display:flex; }
+        .subject-selector-sheet { background:#1a1a1a; border-radius:20px 20px 0 0; width:100%; max-width:500px; max-height:75vh; display:flex; flex-direction:column; border:1px solid #2a2a2a; border-bottom:none; animation:sheetSlideUp 0.25s cubic-bezier(0.34,1.05,0.64,1) both; will-change:transform,opacity; }
+        @keyframes sheetSlideUp { from{transform:translate3d(0,100%,0);opacity:0} to{transform:translate3d(0,0,0);opacity:1} }
+        .subject-selector-header { display:flex; justify-content:space-between; align-items:center; padding:18px 20px 14px; border-bottom:1px solid #2a2a2a; flex-shrink:0; }
+        .subject-selector-title { font-size:1.05rem; font-weight:700; color:#fff; }
+        .subject-selector-close { background:none; border:none; color:#888; font-size:1.1rem; cursor:pointer; width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:50%; transition:all 0.2s; }
+        .subject-selector-close:hover { color:#fff; background:rgba(255,255,255,0.08); }
+        .subject-selector-list { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:8px 0; }
+        .subject-selector-item { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; cursor:pointer; transition:background 0.15s; border-bottom:1px solid #222; }
+        .subject-selector-item:last-child { border-bottom:none; }
+        .subject-selector-item:hover, .subject-selector-item:active { background:rgba(255,255,255,0.05); }
+        .subject-selector-item-name { font-size:0.95rem; color:#e5e5e5; font-weight:500; }
+        .subject-selector-item-check { width:22px; height:22px; border-radius:50%; border:2px solid #444; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s; }
+        .subject-selector-item.selected .subject-selector-item-check { background:#4fc3f7; border-color:#4fc3f7; }
+        .subject-selector-item.selected .subject-selector-item-check::after { content:''; display:block; width:6px; height:10px; border:2px solid #000; border-top:none; border-left:none; transform:rotate(45deg) translate(-1px,-1px); }
+        .subject-selector-item.selected .subject-selector-item-name { color:#4fc3f7; font-weight:600; }
+        .subject-selector-footer { padding:14px 20px; padding-bottom:calc(14px + env(safe-area-inset-bottom,0px)); border-top:1px solid #2a2a2a; flex-shrink:0; }
+        .subject-selector-confirm { width:100%; padding:14px; background:#4fc3f7; border:none; border-radius:10px; color:#000; font-size:0.95rem; font-weight:700; cursor:pointer; font-family:inherit; transition:background 0.2s; }
+        .subject-selector-confirm:hover { background:#29b6f6; }
+        .subject-selector-confirm:active { transform:scale3d(0.98,0.98,1); }
+        .subject-selector-confirm:disabled { background:#2a2a2a; color:#555; cursor:not-allowed; }
+
+        /* ── Rename Material Modal ── */
+        .rename-material-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.75); z-index:1100; align-items:center; justify-content:center; padding:16px; }
+        .rename-material-modal.show { display:flex; }
+        .rename-material-modal .modal-content { animation:modalIn 0.22s cubic-bezier(0.34,1.1,0.64,1) both; will-change:transform,opacity; }
+    </style>
+</head>
+<body>
+
+<!-- Drawer -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="side-drawer" id="sideDrawer">
+    <div class="drawer-header"><h2>Study Manager</h2><p>Organize your studies</p></div>
+    <div class="drawer-menu">
+        <button class="drawer-menu-item active" onclick="showView('home');closeDrawer();" data-testid="drawer-home"><i class="fas fa-home"></i> Home</button>
+        <button class="drawer-menu-item" onclick="showView('materials');closeDrawer();" data-testid="drawer-materials"><i class="fas fa-folder"></i> Materials</button>
+    </div>
+    <div class="drawer-footer">Study Manager v1.0</div>
+</div>
+
+<!-- ══ HOME VIEW ══ -->
+<div id="homeView">
+    <!-- Title row: big bold title LEFT + menu + edit + plus button RIGHT -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 8px 4px 16px; padding-top:10px !important;">
+        <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+            <!-- Header icon: long-press to change -->
+            <div class="header-icon-wrap" id="headerIconWrap" title="Long press to change icon">
+                <div class="header-icon-default" id="headerIconDefault"><i class="fas fa-book-open"></i></div>
+                <img id="headerIconImg" class="header-icon-img" style="display:none;" alt="icon" draggable="false">
+            </div>
+            <input type="file" id="headerIconInput" accept="image/*" onchange="applyHeaderIcon(this)">
+            <h1 class="home-main-title" id="homePageTitle" style="cursor:pointer;" onclick="startHomeTitleEdit()">Library</h1>
+            <input type="text" id="homePageTitleInput" style="display:none; flex:1; background:transparent; border:none; border-bottom:2px solid #4fc3f7; color:#fff; font-size:1.55rem; font-weight:600; font-family:inherit; outline:none; padding:0; -webkit-appearance:none;"
+                onblur="saveHomeTitleEdit()" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){cancelHomeTitleEdit();event.preventDefault();}">
+        </div>
+        <div style="display:flex; align-items:center; gap:0; flex-shrink:0;">
+            <button class="header-action-btn" onclick="openDrawer()" title="Menu" style="font-size:1.2rem; color:#fff;"><i class="fas fa-bars"></i></button>
+            <button class="header-action-btn" onclick="toggleHeaderEditMenu(event)" title="Edit" style="font-size:1.1rem; color:#888;" id="headerPencilBtn"><i class="fas fa-pen"></i></button>
+            <button class="header-action-btn" onclick="openAddSubjectModal()" data-testid="header-add-btn" title="Add subject" style="font-size:1.4rem; font-weight:300;"><i class="fas fa-plus"></i></button>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <div class="search-wrapper"><i class="fas fa-search search-icon"></i><input type="text" class="search-bar" placeholder="Search" id="searchBar" oninput="searchSubjects();toggleSearchClear();" onkeyup="searchSubjects();toggleSearchClear()" onfocus="document.getElementById('searchClearBtn').classList.add('visible')" onblur="if(!document.getElementById('searchBar').value.length)document.getElementById('searchClearBtn').classList.remove('visible')" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="search-clear-btn" id="searchClearBtn" onclick="clearSearchBar()" tabindex="-1"><i class="fas fa-times"></i></button></div>
+    </div>
+    <div class="content">
+        <div class="subjects-grid" id="subjectsGrid"></div>
+        <div class="empty-state" id="emptyState" style="display:none;"><i class="fas fa-book"></i><p>No subjects yet</p><p style="font-size:0.8rem;color:#444;">Tap + to add your first subject</p></div>
+    </div>
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="homeNavHandler()" data-testid="nav-home"><i class="fas fa-home"></i><span>Home</span></div>
+        <div class="nav-item" onclick="showView('materials')" data-testid="nav-materials"><i class="fas fa-folder"></i><span>Materials</span></div>
+    </div>
+</div>
+
+<!-- ══ SUBJECT DETAIL VIEW ══ -->
+<div id="subjectDetailView" class="subject-detail">
+    <div class="detail-header">
+        <button class="back-btn" onclick="goBackToHome()"><i class="fas fa-arrow-left"></i></button>
+        <div class="app-icon"><div class="app-icon-stack"><span></span><span></span><span></span></div></div>
+        <span class="detail-header-title" id="detailHeaderTitle">Subject</span>
+        <!-- Edit only in header for subject detail -->
+        <button class="header-action-btn" onclick="editCurrentSubject()" title="Edit subject" style="color:#4fc3f7;"><i class="fas fa-pen"></i></button>
+    </div>
+
+    <div class="detail-subject-hero">
+        <div class="detail-subject-name" id="subjectDetailTitle">Subject</div>
+        <div class="detail-subject-subtitle" id="subjectDetailSubtitle"></div>
+    </div>
+
+    <div class="detail-info-rows" id="detailInfoRows"></div>
+
+
+    <div class="detail-materials-section">
+        <div class="detail-materials-header">
+            <span class="detail-materials-title">Study Materials</span>
+            <button class="header-action-btn" onclick="openAddContentMenu()" style="color:#fff;"><i class="fas fa-plus"></i></button>
+        </div>
+        <div class="content-items" id="contentItems"></div>
+        <div class="empty-state" id="emptyContentState" style="display:none;"><i class="fas fa-file-alt"></i><p>No content yet</p><p style="font-size:0.8rem;color:#444;">Tap the + button to add notes, images, or PDFs</p></div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item" onclick="homeNavHandler()" data-testid="nav-home-detail"><i class="fas fa-home"></i><span>Home</span></div>
+        <div class="nav-item" onclick="showView('materials')" data-testid="nav-materials-detail"><i class="fas fa-folder"></i><span>Materials</span></div>
+    </div>
+</div>
+
+<!-- ══ MATERIALS VIEW ══ -->
+<div id="materialsView" class="materials-view">
+    <div class="materials-header-section">
+        <!-- Title row: title left, hamburger right -->
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 0 10px;">
+            <h1 class="materials-main-title" id="materialsPageTitle" style="margin-bottom:0;">Study Materials</h1>
+            <button class="hamburger-btn" onclick="openDrawer()" style="font-size:1.3rem;"><i class="fas fa-bars"></i></button>
+        </div>
+        <div class="materials-search-row">
+            <div class="materials-search-wrapper" style="position:relative;">
+                <i class="fas fa-search materials-search-icon"></i>
+                <input type="text" class="materials-search" id="materialsSearch" placeholder="Search by file name..." oninput="searchMaterials();toggleMaterialsSearchClear();" style="padding-right:40px;font-size:16px;-webkit-appearance:none;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onfocus="document.getElementById('materialsSearchClearBtn').classList.add('visible')" onblur="if(!document.getElementById('materialsSearch').value.length)document.getElementById('materialsSearchClearBtn').classList.remove('visible')">
+                <button class="search-clear-btn" id="materialsSearchClearBtn" onclick="clearMaterialsSearch()" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="materials-filter-chips" id="materialsFilterChips"></div>
+    </div>
+    <div class="materials-content" id="materialsContent">
+        <div class="empty-materials" id="emptyMaterials"><i class="fas fa-folder-open"></i><p>No materials yet</p><p style="font-size:0.8rem;color:#444;">Add subjects in Home tab to upload materials</p></div>
+    </div>
+    <div class="bottom-nav">
+        <div class="nav-item" onclick="homeNavHandler()" data-testid="nav-home-materials"><i class="fas fa-home"></i><span>Home</span></div>
+        <div class="nav-item active" data-testid="nav-materials-active"><i class="fas fa-folder"></i><span>Materials</span></div>
+    </div>
+</div>
+
+<!-- ══ MODALS ══ -->
+
+<!-- Add/Edit Subject -->
+<div class="modal" id="addSubjectModal">
+    <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title" id="subjectModalTitle">Add Subject</h2><button class="close-btn" onclick="closeAddSubjectModal()"><i class="fas fa-times"></i></button></div>
+        <form onsubmit="saveSubject(event)">
+            <div class="form-group"><label class="form-label">Subject Title</label><input type="text" class="form-input" id="subjectTitle" placeholder="e.g., Mathematics" required data-testid="subject-title-input"></div>
+            <div class="form-group"><label class="form-label">Subtitle</label><input type="text" class="form-input" id="subjectSubtitle" placeholder="e.g., Grade 10"></div>
+            <div class="form-group">
+                <label class="form-label">Image</label>
+                <div class="file-input-wrapper"><label class="file-input-label"><i class="fas fa-image"></i><span>Choose Image</span><input type="file" class="file-input" id="subjectImage" accept="image/*" onchange="previewSubjectImage()"></label></div>
+                <img id="subjectImagePreview" class="preview-image" style="display:none;">
+                <button type="button" class="remove-image-btn" id="removeImageBtn" style="display:none;" onclick="removeSubjectImage()"><i class="fas fa-times-circle"></i> Remove Image</button>
+            </div>
+            <button type="submit" class="btn btn-primary" data-testid="save-subject-btn"><span id="subjectBtnText">Add Subject</span></button>
+        </form>
+    </div>
+</div>
+
+<!-- Add Content Menu -->
+<div class="modal" id="addContentMenuModal">
+    <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title">Add Content</h2><button class="close-btn" onclick="closeAddContentMenu()"><i class="fas fa-times"></i></button></div>
+        <div class="content-menu">
+            <button class="content-menu-btn" onclick="openAddTextModal()"><i class="fas fa-file-alt"></i><span>Text Note</span></button>
+            <button class="content-menu-btn" onclick="openAddImageModal()"><i class="fas fa-image"></i><span>Image</span></button>
+            <button class="content-menu-btn" onclick="openAddPDFModal()"><i class="fas fa-file-pdf"></i><span>PDF Document</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Text -->
+<div class="modal" id="addTextModal">
+    <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title" id="textModalTitle">Add Text Note</h2><button class="close-btn" onclick="closeAddTextModal()"><i class="fas fa-times"></i></button></div>
+        <form onsubmit="saveTextContent(event)">
+            <div class="form-group"><label class="form-label">Note Title</label><input type="text" class="form-input" id="textNoteTitle" placeholder="Enter note title..."></div>
+            <div class="form-group"><label class="form-label">Note Content</label><textarea class="form-input" id="textContent" placeholder="Write your notes here..." required></textarea></div>
+            <button type="submit" class="btn btn-primary"><span id="textBtnText">Add Note</span></button>
+        </form>
+    </div>
+</div>
+
+<!-- Add Image -->
+<div class="modal" id="addImageModal">
+    <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title">Add Image</h2><button class="close-btn" onclick="closeAddImageModal()"><i class="fas fa-times"></i></button></div>
+        <form onsubmit="saveImageContent(event)">
+            <div class="form-group"><label class="form-label">Select Image</label><div class="file-input-wrapper"><label class="file-input-label"><i class="fas fa-upload"></i><span>Upload from Device</span><input type="file" class="file-input" id="contentImage" accept="image/*" onchange="previewContentImage()" required></label></div><img id="contentImagePreview" class="preview-image" style="display:none;"></div>
+            <div class="form-group"><label class="form-label">Image Name (optional)</label><input type="text" class="form-input" id="imageName" placeholder="e.g., Diagram 1"></div>
+            <button type="submit" class="btn btn-primary">Add Image</button>
+        </form>
+    </div>
+</div>
+
+<!-- Add PDF -->
+<div class="modal" id="addPDFModal">
+    <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title">Add PDF</h2><button class="close-btn" onclick="closeAddPDFModal()"><i class="fas fa-times"></i></button></div>
+        <form onsubmit="savePDFContent(event)">
+            <div class="form-group"><label class="form-label">Select PDF</label><div class="file-input-wrapper"><label class="file-input-label"><i class="fas fa-upload"></i><span>Upload from Device</span><input type="file" class="file-input" id="contentPDF" accept="application/pdf" onchange="updatePDFName()" required></label></div></div>
+            <div class="form-group"><label class="form-label">PDF Name</label><input type="text" class="form-input" id="pdfName" placeholder="e.g., Chapter 1 Notes" required></div>
+            <button type="submit" class="btn btn-primary">Add PDF</button>
+        </form>
+    </div>
+</div>
+
+<!-- View Image -->
+<div class="modal" id="viewImageModal">
+    <div class="modal-content" style="max-width:600px;background:#000;">
+        <div class="modal-header"><h2 class="modal-title">View Image</h2><button class="close-btn" onclick="closeViewImageModal()"><i class="fas fa-times"></i></button></div>
+        <img id="viewImageContent" style="width:100%;border-radius:8px;">
+    </div>
+</div>
+
+<!-- View Text Note (inline card style modal) -->
+<div class="modal" id="viewTextModal">
+    <div class="view-text-modal-content">
+        <div class="modal-header"><h2 class="modal-title">Text Note</h2><button class="close-btn" onclick="document.getElementById('viewTextModal').classList.remove('show')"><i class="fas fa-times"></i></button></div>
+        <div class="text-note-label">Note</div>
+        <div class="view-text-body" id="viewTextBody"></div>
+    </div>
+</div>
+
+<!-- Material Action Popup (Copy / Move) -->
+<div id="materialActionPopup" class="material-action-popup">
+    <div class="material-action-popup-backdrop" onclick="closeMaterialActionPopup()"></div>
+    <div class="material-action-popup-menu" id="materialActionPopupMenu">
+        <button class="material-action-popup-item" onclick="closeMaterialActionPopup();openCopyMaterialModal()">
+            <i class="fas fa-copy"></i> Copy
+        </button>
+        <button class="material-action-popup-item" onclick="closeMaterialActionPopup();openMoveMaterialModal(_materialActionTargetId)">
+            <i class="fas fa-arrow-right"></i> Move
+        </button>
+    </div>
+</div>
+
+<!-- Custom Subject Selector Modal (Move & Copy) -->
+<div class="subject-selector-modal" id="subjectSelectorModal">
+    <div class="subject-selector-sheet">
+        <div class="subject-selector-header">
+            <span class="subject-selector-title" id="subjectSelectorTitle">Select Subject</span>
+            <button class="subject-selector-close" onclick="closeSubjectSelectorModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="subject-selector-list" id="subjectSelectorList"></div>
+        <div class="subject-selector-footer">
+            <button class="subject-selector-confirm" id="subjectSelectorConfirm" onclick="confirmSubjectSelector()" disabled>Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Rename Material Modal -->
+<div class="rename-material-modal" id="renameMaterialModal">
+    <div class="modal-content" style="max-width:400px;">
+        <div class="modal-header">
+            <h2 class="modal-title">Rename</h2>
+            <button class="close-btn" onclick="closeRenameMaterialModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-input" id="renameMaterialInput" placeholder="Enter name…"
+                onkeydown="if(event.key==='Enter')saveRenameMaterial();if(event.key==='Escape')closeRenameMaterialModal();">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px;">
+            <button class="btn" style="background:#222;color:#aaa;flex:1;" onclick="closeRenameMaterialModal()">Cancel</button>
+            <button class="btn btn-primary" style="flex:1;" onclick="saveRenameMaterial()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-dialog" id="confirmDialog">
+    <div class="confirm-dialog-content">
+        <div class="confirm-dialog-header"><div class="confirm-dialog-title" id="confirmTitle">Confirm</div><div class="confirm-dialog-message" id="confirmMessage">Are you sure?</div></div>
+        <div class="confirm-dialog-actions">
+            <button class="confirm-dialog-btn destructive" id="confirmActionBtn">Delete</button>
+            <button class="confirm-dialog-btn" onclick="closeConfirmDialog()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Header Edit Popup Menu -->
+<div id="headerEditPopup" class="header-edit-popup">
+    <div class="header-edit-popup-backdrop" onclick="closeHeaderEditMenu()"></div>
+    <div class="header-edit-popup-menu" id="headerEditPopupMenu">
+        <button class="header-edit-popup-item" onclick="closeHeaderEditMenu();startHomeTitleEdit();">
+            <i class="fas fa-font"></i> Rename Title
+        </button>
+        <label class="header-edit-popup-item" style="cursor:pointer;" onclick="closeHeaderEditMenu();">
+            <i class="fas fa-image"></i> Replace Image
+            <input type="file" accept="image/*" style="display:none;position:absolute;opacity:0;" onchange="applyHeaderIcon(this)">
+        </label>
+        <button class="header-edit-popup-item destructive" onclick="closeHeaderEditMenu();removeHeaderIcon();">
+            <i class="fas fa-times-circle"></i> Remove Icon
+        </button>
+    </div>
+</div>
+
+<!-- Subject Edit Compact Popup (Subject Folder Only — 3 options) -->
+<div id="subjectEditPopup" class="subject-edit-popup">
+    <div class="subject-edit-popup-backdrop" onclick="closeSubjectEditPopup()"></div>
+    <div class="subject-edit-popup-menu" id="subjectEditPopupMenu">
+        <!-- Rename Title -->
+        <button class="subject-edit-popup-item" onclick="toggleSubjectEditInline('title')">
+            <i class="fas fa-font"></i> Rename Title
+        </button>
+        <div class="subject-edit-inline-row" id="seInlineTitle">
+            <input class="subject-edit-inline-input" id="seInputTitle" placeholder="Enter title…"
+                onkeydown="if(event.key==='Enter')saveSubjectEditField('title');if(event.key==='Escape')hideSubjectEditInline('title');">
+            <div class="subject-edit-inline-actions">
+                <button class="subject-edit-inline-save" onclick="saveSubjectEditField('title')">Save</button>
+                <button class="subject-edit-inline-cancel" onclick="hideSubjectEditInline('title')">Cancel</button>
+            </div>
+        </div>
+        <!-- Edit Subtitle -->
+        <button class="subject-edit-popup-item" onclick="toggleSubjectEditInline('subtitle')">
+            <i class="fas fa-tag"></i> Edit Subtitle
+        </button>
+        <div class="subject-edit-inline-row" id="seInlineSubtitle">
+            <input class="subject-edit-inline-input" id="seInputSubtitle" placeholder="Enter subtitle…"
+                onkeydown="if(event.key==='Enter')saveSubjectEditField('subtitle');if(event.key==='Escape')hideSubjectEditInline('subtitle');">
+            <div class="subject-edit-inline-actions">
+                <button class="subject-edit-inline-save" onclick="saveSubjectEditField('subtitle')">Save</button>
+                <button class="subject-edit-inline-cancel" onclick="hideSubjectEditInline('subtitle')">Cancel</button>
+            </div>
+        </div>
+        <!-- Edit Info -->
+        <button class="subject-edit-popup-item" onclick="closeSubjectEditPopup();openEditInfoModal()">
+            <i class="fas fa-info-circle"></i> Edit Info
+        </button>
+    </div>
+</div>
+
+<!-- Edit Info Modal (Subject Folder Only) -->
+<div class="modal" id="editInfoModal">
+    <div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title">Edit Info</h2><button class="close-btn" onclick="closeEditInfoModal()"><i class="fas fa-times"></i></button></div>
+        <div class="form-group"><label class="form-label">Subject Name</label><input type="text" class="form-input" id="editInfoName" placeholder="e.g., Mathematics"></div>
+        <div class="form-group"><label class="form-label">Category</label><input type="text" class="form-input" id="editInfoCategory" placeholder="e.g., Grade 10"></div>
+        <button class="btn btn-primary" onclick="saveEditInfo()">Save Changes</button>
+    </div>
+</div>
+
+<script>
+// ── IndexedDB ──────────────────────────────────────────────────────────────────
+let db;
+const DB_NAME = 'StudyManagerDB';
+const DB_VERSION = 1;
+const openDB = () => new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => { db = req.result; resolve(db); };
+    req.onupgradeneeded = e => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains('subjects'))
+            db.createObjectStore('subjects', { keyPath:'id', autoIncrement:true });
+        if (!db.objectStoreNames.contains('content')) {
+            const cs = db.createObjectStore('content', { keyPath:'id', autoIncrement:true });
+            cs.createIndex('subjectId', 'subjectId', { unique:false });
+        }
+    };
+});
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let currentSubjectId = null;
+let editingSubjectId = null;
+let editingContentId = null;
+let currentView      = 'home';
+let activeFilterId   = null;
+let currentSearchQuery = '';
+let movingMaterialId   = null;
+let currentSubjectImageData = null;
+let confirmCallback  = null;
+let longPressTimer   = null;     // for long-press detection
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+    // ── Prevent browser context menu / text-selection popups ──
+    // Note: -webkit-touch-callout:none in CSS already suppresses image callouts.
+    // We only block contextmenu + selectstart here — NOT touchstart globally,
+    // as that would break vertical scrolling.
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; });
+    document.addEventListener('selectstart', function(e) { e.preventDefault(); return false; });
+    document.getElementById('confirmActionBtn').onclick = () => { if(confirmCallback) confirmCallback(); closeConfirmDialog(); };
+    // Instruction 1: Enter key on search bar opens first visible subject result
+    document.getElementById('searchBar').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const firstCard = document.querySelector('#subjectsGrid .subject-card');
+            if (firstCard) {
+                const subjectId = parseInt(firstCard.getAttribute('data-subject-id'));
+                const titleEl = firstCard.querySelector('.subject-title');
+                const title = titleEl ? titleEl.textContent : '';
+                openSubject(subjectId, title);
+            }
+        }
+    });
+    // Materials search: Enter key dismisses keyboard, results remain visible
+    document.getElementById('materialsSearch').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+    });
+    await openDB();
+    loadSubjects();
+    loadHomeTitle();
+    loadMaterialsTitle();
+    // Dismiss long-press highlight when tapping elsewhere
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.subject-card')) {
+            document.querySelectorAll('.subject-card.long-pressed').forEach(c => c.classList.remove('long-pressed'));
+        }
+    });
+    } catch(initErr) { /* silent fail — prevents white screen on WebView init errors */ }
+});
+
+// ── Drawer ─────────────────────────────────────────────────────────────────────
+function openDrawer()  { document.getElementById('sideDrawer').classList.add('open');    document.getElementById('drawerOverlay').classList.add('open'); }
+function closeDrawer() { document.getElementById('sideDrawer').classList.remove('open'); document.getElementById('drawerOverlay').classList.remove('open'); }
+
+// ── Confirm ────────────────────────────────────────────────────────────────────
+function showConfirmDialog(title, msg, btnText, cb) {
+    document.getElementById('confirmTitle').textContent   = title;
+    document.getElementById('confirmMessage').textContent = msg;
+    document.getElementById('confirmActionBtn').textContent = btnText;
+    confirmCallback = cb;
+    document.getElementById('confirmDialog').classList.add('show');
+}
+function closeConfirmDialog() { document.getElementById('confirmDialog').classList.remove('show'); confirmCallback = null; }
+
+// ── Views ──────────────────────────────────────────────────────────────────────
+function showView(view) {
+    currentView = view;
+    document.getElementById('homeView').style.display = 'none';
+    document.getElementById('subjectDetailView').classList.remove('show');
+    document.getElementById('materialsView').classList.remove('show');
+    if (view === 'materials') { document.getElementById('materialsView').classList.add('show'); loadMaterials(); toggleMaterialsSearchClear(); }
+    else if (view === 'home') { document.getElementById('homeView').style.display = 'block'; }
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    if (view === 'home') document.querySelectorAll('[data-testid="nav-home"],[data-testid="nav-home-detail"],[data-testid="nav-home-materials"]').forEach(i => i.classList.add('active'));
+    else if (view === 'materials') document.querySelectorAll('[data-testid="nav-materials"],[data-testid="nav-materials-detail"],[data-testid="nav-materials-active"]').forEach(i => i.classList.add('active'));
+    document.querySelectorAll('.drawer-menu-item').forEach(i => i.classList.remove('active'));
+    document.querySelector(view==='home'?'[data-testid="drawer-home"]':'[data-testid="drawer-materials"]').classList.add('active');
+}
+
+// ── Subjects ───────────────────────────────────────────────────────────────────
+function loadSubjects() {
+    const tx = db.transaction(['subjects'], 'readonly');
+    tx.objectStore('subjects').getAll().onsuccess = e => displaySubjects(e.target.result);
+}
+
+function displaySubjects(subjects) {
+    const grid  = document.getElementById('subjectsGrid');
+    const empty = document.getElementById('emptyState');
+    if (!subjects.length) { grid.style.display='none'; empty.style.display='block'; return; }
+    grid.style.display='grid'; empty.style.display='none'; grid.innerHTML='';
+
+    // Apply saved order from localStorage
+    var savedOrder = [];
+    try { savedOrder = JSON.parse(localStorage.getItem('subjectsOrder')||'[]'); } catch(e) { savedOrder = []; }
+    if(savedOrder.length){
+        subjects.sort((a,b)=>{
+            const ai=savedOrder.indexOf(a.id), bi=savedOrder.indexOf(b.id);
+            return (ai===-1?9999:ai)-(bi===-1?9999:bi);
+        });
+    }
+
+    subjects.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'subject-card';
+        card.setAttribute('data-testid', `subject-card-${s.id}`);
+        card.setAttribute('data-subject-id', s.id);
+        card.setAttribute('draggable', 'false'); // enabled only after long-press
+        card.innerHTML = `
+            <div class="subject-actions">
+                <button class="action-icon drag-handle-card" data-testid="drag-subject-${s.id}" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></button>
+                <button class="action-icon" data-testid="edit-subject-${s.id}"><i class="fas fa-pen"></i></button>
+                <button class="action-icon delete" data-testid="delete-subject-${s.id}"><i class="fas fa-trash"></i></button>
+            </div>
+            <img src="${s.image||defaultImg()}" class="subject-image" alt="${s.title}">
+            <div class="subject-info"><div class="subject-title">${s.title}</div><div class="subject-subtitle">${s.subtitle||s.title}</div></div>`;
+
+        const handle = card.querySelector('.drag-handle-card');
+
+        // ── Long press: show action icons ──
+        // Uses passive touchstart so scroll is never blocked.
+        // touchMoved flag cancels long-press if finger moves (user is scrolling).
+        let lpTimer=null, touchMoved=false;
+        const startLP=(e)=>{
+            if(e.type==='touchstart') touchMoved=false;
+            lpTimer=setTimeout(()=>{
+                if(touchMoved) return; // finger moved = scrolling, not long-press
+                document.querySelectorAll('.subject-card.long-pressed').forEach(c=>{if(c!==card)c.classList.remove('long-pressed');});
+                card.classList.add('long-pressed');
+            },500);
+        };
+        const cancelLP=()=>{ if(lpTimer){clearTimeout(lpTimer);lpTimer=null;} };
+        const trackTouchMove=()=>{ touchMoved=true; cancelLP(); };
+        card.addEventListener('mousedown', startLP);
+        card.addEventListener('touchstart', startLP, {passive:true});
+        card.addEventListener('mouseup', cancelLP);
+        card.addEventListener('mouseleave', cancelLP);
+        card.addEventListener('touchmove', trackTouchMove, {passive:true});
+        card.addEventListener('touchend', cancelLP, {passive:true});
+        card.addEventListener('touchcancel', cancelLP, {passive:true});
+
+        // ── Desktop drag: only from handle ──
+        handle.addEventListener('mousedown', ()=>{
+            card.setAttribute('draggable','true');
+        });
+        handle.addEventListener('mouseup', ()=>{
+            setTimeout(()=>card.setAttribute('draggable','false'),200);
+        });
+
+        card.addEventListener('dragstart', e=>{
+            if(card.getAttribute('draggable')!=='true'){e.preventDefault();return;}
+            e.dataTransfer.effectAllowed='move';
+            e.dataTransfer.setData('text/plain', s.id);
+            card.classList.add('dragging');
+        });
+        card.addEventListener('dragend', ()=>{
+            card.classList.remove('dragging');
+            card.classList.remove('long-pressed');
+            card.setAttribute('draggable','false');
+            card.style.transform = '';
+            card.style.opacity = '';
+            document.querySelectorAll('.subject-card.drag-over').forEach(c=>c.classList.remove('drag-over'));
+            saveSubjectsOrder();
+        });
+        card.addEventListener('dragover', e=>{
+            e.preventDefault();
+            document.querySelectorAll('.subject-card.drag-over').forEach(c=>c.classList.remove('drag-over'));
+            card.classList.add('drag-over');
+        });
+        card.addEventListener('dragleave', ()=>card.classList.remove('drag-over'));
+        card.addEventListener('drop', e=>{
+            e.preventDefault();
+            card.classList.remove('drag-over');
+            const fromId=parseInt(e.dataTransfer.getData('text/plain'));
+            const toId=s.id;
+            if(fromId===toId)return;
+            const fromCard=grid.querySelector(`[data-subject-id="${fromId}"]`);
+            if(!fromCard)return;
+            const allCards=[...grid.children];
+            const fromIdx=allCards.indexOf(fromCard);
+            const toIdx=allCards.indexOf(card);
+            if(fromIdx<toIdx) grid.insertBefore(fromCard, card.nextSibling);
+            else grid.insertBefore(fromCard, card);
+            fromCard.classList.remove('long-pressed');
+            saveSubjectsOrder();
+        });
+
+        // Touch drag: only from handle
+        setupTouchDragCard(card, handle, grid);
+
+        // Edit / Delete buttons — hide icons after action
+        card.querySelector(`[data-testid="edit-subject-${s.id}"]`).addEventListener('click', e => { e.stopPropagation(); card.classList.remove('long-pressed'); editSubject(s.id); });
+        card.querySelector(`[data-testid="delete-subject-${s.id}"]`).addEventListener('click', e => { e.stopPropagation(); card.classList.remove('long-pressed'); deleteSubject(s.id); });
+
+        // Tap to open — only if not in long-pressed state
+        card.addEventListener('click', (e) => {
+            if(card.classList.contains('long-pressed')){card.classList.remove('long-pressed');return;}
+            openSubject(s.id, s.title);
+        });
+
+        grid.appendChild(card);
+    });
+}
+
+function saveSubjectsOrder(){
+    if(typeof(Storage)==='undefined')return;
+    const grid=document.getElementById('subjectsGrid');
+    const order=[...grid.querySelectorAll('.subject-card')].map(c=>parseInt(c.getAttribute('data-subject-id')));
+    try{localStorage.setItem('subjectsOrder', JSON.stringify(order));}catch(e){}
+}
+
+function setupTouchDragCard(card, handle, grid){
+    let touchDragging=false, ghost=null, lastOver=null;
+    handle.addEventListener('touchstart', e=>{
+        e.preventDefault(); // CRITICAL: prevent browser context menu/callout
+        e.stopPropagation(); // prevent card's long-press from also firing
+        const t=e.touches[0];
+        touchDragging=true;
+        ghost=card.cloneNode(true);
+        ghost.style.cssText=`position:fixed;z-index:9999;opacity:0.8;pointer-events:none;width:${card.offsetWidth}px;transform:scale(1.04);transition:none;`;
+        ghost.style.left=(t.clientX-card.offsetWidth/2)+'px';
+        ghost.style.top=(t.clientY-card.offsetHeight/2)+'px';
+        document.body.appendChild(ghost);
+        card.classList.add('dragging');
+    },{passive:false});
+    handle.addEventListener('touchmove', e=>{
+        if(!touchDragging||!ghost)return;
+        e.preventDefault();
+        const t=e.touches[0];
+        ghost.style.left=(t.clientX-card.offsetWidth/2)+'px';
+        ghost.style.top=(t.clientY-card.offsetHeight/2)+'px';
+        ghost.style.display='none';
+        const el=document.elementFromPoint(t.clientX,t.clientY);
+        ghost.style.display='';
+        const overCard=el?el.closest('.subject-card'):null;
+        if(lastOver&&lastOver!==card) lastOver.classList.remove('drag-over');
+        if(overCard&&overCard!==card){overCard.classList.add('drag-over');lastOver=overCard;}
+    },{passive:false});
+
+    const endTouchDrag = (e) => {
+        if(!touchDragging)return;
+        touchDragging=false;
+        if(ghost){ghost.remove();ghost=null;}
+        card.classList.remove('dragging');
+        card.classList.remove('long-pressed');
+        card.style.transform='';
+        card.style.opacity='';
+        if(lastOver){
+            lastOver.classList.remove('drag-over');
+            const allCards=[...grid.children];
+            const fromIdx=allCards.indexOf(card);
+            const toIdx=allCards.indexOf(lastOver);
+            if(fromIdx<toIdx) grid.insertBefore(card, lastOver.nextSibling);
+            else grid.insertBefore(card, lastOver);
+            lastOver=null;
+            saveSubjectsOrder();
+        }
+    };
+    handle.addEventListener('touchend', endTouchDrag, {passive:true});
+    handle.addEventListener('touchcancel', endTouchDrag, {passive:true});
+}
+
+function searchSubjects() {
+    const q = document.getElementById('searchBar').value.toLowerCase();
+    const tx = db.transaction(['subjects'], 'readonly');
+    tx.objectStore('subjects').getAll().onsuccess = e =>
+        displaySubjects(e.target.result.filter(s => s.title.toLowerCase().includes(q)||(s.subtitle||'').toLowerCase().includes(q)));
+}
+
+function openAddSubjectModal() {
+    editingSubjectId=null; currentSubjectImageData=null;
+    document.getElementById('subjectModalTitle').textContent='Add Subject';
+    document.getElementById('subjectBtnText').textContent='Add Subject';
+    document.getElementById('subjectTitle').value=''; document.getElementById('subjectSubtitle').value='';
+    document.getElementById('subjectImage').value='';
+    document.getElementById('subjectImagePreview').style.display='none';
+    document.getElementById('removeImageBtn').style.display='none';
+    document.getElementById('addSubjectModal').classList.add('show');
+}
+function closeAddSubjectModal() { document.getElementById('addSubjectModal').classList.remove('show'); }
+
+function previewSubjectImage() {
+    const file=document.getElementById('subjectImage').files[0]; if(!file)return;
+    const r=new FileReader(); r.onload=e=>{currentSubjectImageData=e.target.result;document.getElementById('subjectImagePreview').src=e.target.result;document.getElementById('subjectImagePreview').style.display='block';document.getElementById('removeImageBtn').style.display='flex';};r.readAsDataURL(file);
+}
+function removeSubjectImage(){document.getElementById('subjectImage').value='';document.getElementById('subjectImagePreview').style.display='none';document.getElementById('removeImageBtn').style.display='none';currentSubjectImageData=null;}
+
+// KEY FIX: all async BEFORE opening IDB transaction
+async function saveSubject(event) {
+    event.preventDefault();
+    const title   = document.getElementById('subjectTitle').value.trim();
+    const subtitle= document.getElementById('subjectSubtitle').value.trim();
+    const imageFile=document.getElementById('subjectImage').files[0];
+    if(!title)return;
+    let imageData=currentSubjectImageData;
+    if(imageFile&&!imageData) imageData=await fileToBase64(imageFile);
+    const tx=db.transaction(['subjects'],'readwrite');const store=tx.objectStore('subjects');
+    if(editingSubjectId){
+        // Edit existing: read record first, update ONLY title/subtitle/image — preserve subjectInfo/categoryInfo untouched
+        store.get(editingSubjectId).onsuccess=e=>{
+            const s=e.target.result;
+            s.title=title;
+            s.subtitle=subtitle||title;
+            s.image=imageData||null;
+            // subjectInfo and categoryInfo are NEVER touched here
+            store.put(s);
+        };
+    }else{
+        // New subject creation: seed subjectInfo/categoryInfo from title/subtitle at creation time ONLY
+        const subject={title,subtitle:subtitle||title,image:imageData||null,createdAt:new Date().toISOString(),subjectInfo:title,categoryInfo:subtitle||title};
+        store.add(subject);
+    }
+    tx.oncomplete=()=>{closeAddSubjectModal();loadSubjects();if(currentView==='materials')loadMaterials();};
+    tx.onerror=e=>{alert('Save failed. Please try again.');};
+}
+
+function editSubject(id) {
+    const tx=db.transaction(['subjects'],'readonly');
+    tx.objectStore('subjects').get(id).onsuccess=e=>{
+        const s=e.target.result; editingSubjectId=id; currentSubjectImageData=s.image;
+        document.getElementById('subjectModalTitle').textContent='Edit Subject';
+        document.getElementById('subjectBtnText').textContent='Save Changes';
+        document.getElementById('subjectTitle').value=s.title; document.getElementById('subjectSubtitle').value=s.subtitle;
+        if(s.image){document.getElementById('subjectImagePreview').src=s.image;document.getElementById('subjectImagePreview').style.display='block';document.getElementById('removeImageBtn').style.display='flex';}
+        else{document.getElementById('subjectImagePreview').style.display='none';document.getElementById('removeImageBtn').style.display='none';}
+        document.getElementById('addSubjectModal').classList.add('show');
+    };
+}
+
+function deleteSubject(id) {
+    showConfirmDialog('Delete Subject','Are you sure? All content will be lost.','Delete',()=>{
+        const tx=db.transaction(['subjects','content'],'readwrite');
+        tx.objectStore('subjects').delete(id);
+        const req=tx.objectStore('content').index('subjectId').openCursor(IDBKeyRange.only(id));
+        req.onsuccess=e=>{const c=e.target.result;if(c){c.delete();c.continue();}};
+        tx.oncomplete=()=>{loadSubjects();if(currentView==='materials')loadMaterials();};
+    });
+}
+
+// Edit/Delete from detail header — now opens compact popup
+function editCurrentSubject() {
+    if(!currentSubjectId)return;
+    const tx=db.transaction(['subjects'],'readonly');
+    tx.objectStore('subjects').get(currentSubjectId).onsuccess=e=>{
+        const s=e.target.result;
+        // Seed inline inputs with current values
+        document.getElementById('seInputTitle').value=s.title||'';
+        document.getElementById('seInputSubtitle').value=s.subtitle||s.title||'';
+        // Reset pending edits
+        window._seEdits={title:s.title,subtitle:s.subtitle||s.title,image:s.image};
+        window._seNewImageData=null;
+        // Hide all inline rows
+        ['title','subtitle'].forEach(f=>hideSubjectEditInline(f));
+        // Position and open popup below the pencil button in detail header
+        const btn=document.querySelector('#subjectDetailView .header-action-btn');
+        const popup=document.getElementById('subjectEditPopup');
+        const menu=document.getElementById('subjectEditPopupMenu');
+        popup.classList.add('open');
+        if(btn){
+            const rect=btn.getBoundingClientRect();
+            const menuW=260;
+            let left=rect.right-menuW;
+            if(left<8)left=8;
+            if(left+menuW>window.innerWidth-8)left=window.innerWidth-menuW-8;
+            menu.style.left=left+'px';
+            menu.style.top=(rect.bottom+6)+'px';
+            menu.style.right='auto';
+        } else {
+            menu.style.right='16px'; menu.style.top='80px'; menu.style.left='auto';
+        }
+    };
+}
+function deleteCurrentSubject() {
+    if(!currentSubjectId)return;
+    showConfirmDialog('Delete Subject','Are you sure? All content will be lost.','Delete',()=>{
+        const tx=db.transaction(['subjects','content'],'readwrite');
+        tx.objectStore('subjects').delete(currentSubjectId);
+        const req=tx.objectStore('content').index('subjectId').openCursor(IDBKeyRange.only(currentSubjectId));
+        req.onsuccess=e=>{const c=e.target.result;if(c){c.delete();c.continue();}};
+        tx.oncomplete=()=>{goBackToHome();loadSubjects();};
+    });
+}
+
+// ── Change Subject Image (from detail view) ────────────────────────────────────
+async function changeSubjectImage() {
+    const file=document.getElementById('changeSubjectImageInput').files[0]; if(!file||!currentSubjectId)return;
+    const imageData=await fileToBase64(file);
+    const tx=db.transaction(['subjects'],'readwrite');const store=tx.objectStore('subjects');
+    store.get(currentSubjectId).onsuccess=e=>{const s=e.target.result;s.image=imageData;store.put(s);};
+    tx.oncomplete=()=>{document.getElementById('changeSubjectImageInput').value='';};
+}
+
+// ── Subject Detail ─────────────────────────────────────────────────────────────
+function openSubject(id, title) {
+    currentSubjectId=id;
+    const tx=db.transaction(['subjects'],'readonly');
+    tx.objectStore('subjects').get(id).onsuccess=e=>{
+        const s=e.target.result;
+        document.getElementById('detailHeaderTitle').textContent=title;
+        document.getElementById('subjectDetailTitle').textContent=s.title;
+        document.getElementById('subjectDetailSubtitle').textContent=s.subtitle||'';
+        buildInfoRows(s);
+        document.getElementById('homeView').style.display='none';
+        document.getElementById('subjectDetailView').classList.add('show');
+        loadContent();
+    };
+}
+
+function buildInfoRows(s){
+    const infoRows=document.getElementById('detailInfoRows');infoRows.innerHTML='';
+    // Subject info row — reads ONLY dedicated subjectInfo field, NEVER title
+    infoRows.appendChild(makeInfoRow('Subject', s.subjectInfo!==undefined?s.subjectInfo:s.title, 'subjectInfo', s));
+    // Category info row — reads ONLY dedicated categoryInfo field, NEVER subtitle
+    infoRows.appendChild(makeInfoRow('Category', s.categoryInfo!==undefined?s.categoryInfo:(s.subjectInfo!==undefined?s.subjectInfo:s.title), 'categoryInfo', s));
+}
+
+function makeInfoRow(label, value, field, s){
+    const row=document.createElement('div');
+    row.className='detail-info-row';
+    row.innerHTML=`
+        <span class="detail-info-label">${label}</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;flex:1;margin-left:12px;">
+            <span class="detail-info-value" id="infoVal_${field}">${value}</span>
+        </div>`;
+    return row;
+}
+
+function goBackToHome() {
+    document.getElementById('subjectDetailView').classList.remove('show');
+    document.getElementById('homeView').style.display='block';
+    currentSubjectId=null;
+}
+
+function loadContent() {
+    const tx=db.transaction(['content'],'readonly');
+    tx.objectStore('content').index('subjectId').getAll(IDBKeyRange.only(currentSubjectId)).onsuccess=e=>
+        displayContent(e.target.result.sort((a,b)=>a.order-b.order));
+}
+
+function searchContent() {
+    const el=document.getElementById('detailSearchBar');
+    const q=el?el.value.toLowerCase():'';
+    const tx=db.transaction(['content'],'readonly');
+    tx.objectStore('content').index('subjectId').getAll(IDBKeyRange.only(currentSubjectId)).onsuccess=e=>{
+        let items=e.target.result.sort((a,b)=>a.order-b.order);
+        if(q)items=items.filter(i=>(i.name||'').toLowerCase().includes(q)||(i.content||'').toLowerCase().includes(q));
+        displayContent(items);
+    };
+}
+
+function displayContent(items) {
+    const container=document.getElementById('contentItems');
+    const empty=document.getElementById('emptyContentState');
+    if(!container)return;
+    if(!items.length){container.style.display='none';empty.style.display='block';return;}
+    container.style.display='flex';empty.style.display='none';container.innerHTML='';
+    const seenIds=new Set();
+    items.forEach((item,idx)=>{
+        if(seenIds.has(item.id))return;
+        seenIds.add(item.id);
+        const wrapper=document.createElement('div');
+        wrapper.className='content-item-wrapper';
+        wrapper.setAttribute('data-id',item.id);
+        wrapper.style.cssText='opacity:0;transform:translateY(5px);transition:opacity 0.15s ease,transform 0.15s ease;';
+
+        const dragHandle=`<div class="drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></div>`;
+
+        if(item.type==='text'){
+            const name=item.name||(item.content?item.content.substring(0,40)+'...':'Text Note');
+            wrapper.innerHTML=`
+            <div class="content-item" style="align-items:center;border-bottom:none;padding-bottom:6px;">
+                ${dragHandle}
+                <div class="content-item-thumb" style="cursor:default;flex-shrink:0;"><i class="fas fa-file-alt"></i></div>
+                <div class="content-item-info" style="min-width:0;flex:1;">
+                    <div class="content-item-name" id="nameDisplay_${item.id}">${escHtml(name)}</div>
+                    <div class="content-item-meta">TEXT NOTE</div>
+                </div>
+                <div class="content-item-actions">
+                    <button class="content-action-btn" title="Edit" id="editBtn_${item.id}" onclick="toggleEditPanel(${item.id},'text');event.stopPropagation();" ontouchend="requestAnimationFrame(()=>{this.blur();this.style.background='';});"><i class="fas fa-edit"></i></button>
+                    <button class="content-action-btn delete" title="Delete" onclick="deleteContent(${item.id});event.stopPropagation();" ontouchend="requestAnimationFrame(()=>{this.blur();this.style.background='';});"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            <div class="text-note-inline" id="textInline_${item.id}" style="display:block;padding:0 0 10px 52px;">
+                <div class="text-note-body-inline" id="textBody_${item.id}">${escHtml(item.content||'')}</div>
+                <textarea class="text-note-edit-area" id="textEdit_${item.id}" style="display:none;">${escHtml(item.content||'')}</textarea>
+                <div class="text-note-edit-actions" id="textEditActions_${item.id}" style="display:none;margin-top:8px;">
+                    <button class="text-save-btn" onclick="saveInlineText(${item.id})"><i class="fas fa-check"></i> Save</button>
+                    <button class="text-cancel-btn" onclick="cancelInlineText(${item.id})"><i class="fas fa-times"></i> Cancel</button>
+                </div>
+            </div>
+            <div class="edit-action-panel" id="editPanel_${item.id}">
+                <button class="edit-panel-btn" onclick="showPanelRename(${item.id})"><i class="fas fa-font"></i> Rename</button>
+                <button class="edit-panel-btn" onclick="showPanelTextEdit(${item.id})"><i class="fas fa-pen"></i> Edit Content</button>
+                <div class="edit-panel-rename-row" id="panelRenameRow_${item.id}">
+                    <input class="edit-panel-rename-input" id="panelRenameInput_${item.id}" placeholder="Enter new name…"
+                        onkeydown="if(event.key==='Enter')savePanelRename(${item.id});if(event.key==='Escape')hidePanelRename(${item.id});">
+                    <div class="edit-panel-rename-actions">
+                        <button class="ep-save-btn" onclick="savePanelRename(${item.id})">Save</button>
+                        <button class="ep-cancel-btn" onclick="hidePanelRename(${item.id})">Cancel</button>
+                    </div>
+                </div>
+            </div>
+            <div style="border-bottom:1px solid #1a1a1a;"></div>`;
+
+        } else if(item.type==='image'){
+            const name=item.name||'Image';
+            wrapper.innerHTML=`
+            <div class="content-item">
+                ${dragHandle}
+                <div class="content-item-thumb" onclick="viewImage('${item.content}')"><img src="${item.content}" alt="${escAttr(name)}"></div>
+                <div class="content-item-info" onclick="viewImage('${item.content}')">
+                    <div class="content-item-name" id="nameDisplay_${item.id}">${escHtml(name)}</div>
+                    <div class="content-item-meta">IMAGE</div>
+                </div>
+                <div class="content-item-actions">
+                    <button class="content-action-btn" title="Edit" id="editBtn_${item.id}" onclick="toggleEditPanel(${item.id},'image');event.stopPropagation();" ontouchend="requestAnimationFrame(()=>{this.blur();this.style.background='';});"><i class="fas fa-edit"></i></button>
+                    <button class="content-action-btn delete" title="Delete" onclick="deleteContent(${item.id});event.stopPropagation();" ontouchend="requestAnimationFrame(()=>{this.blur();this.style.background='';});"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="content-item-chevron" onclick="viewImage('${item.content}')"><i class="fas fa-chevron-right"></i></div>
+            </div>
+            <div class="edit-action-panel" id="editPanel_${item.id}">
+                <button class="edit-panel-btn" onclick="showPanelRename(${item.id})"><i class="fas fa-font"></i> Rename</button>
+                <label class="edit-panel-btn" style="cursor:pointer;"><i class="fas fa-upload"></i> Replace Image
+                    <input type="file" accept="image/*" style="display:none;" onchange="replaceImage(${item.id},this);closeEditPanel(${item.id});">
+                </label>
+                <div class="edit-panel-rename-row" id="panelRenameRow_${item.id}">
+                    <input class="edit-panel-rename-input" id="panelRenameInput_${item.id}" value="${escAttr(name)}" placeholder="Enter new name…"
+                        onkeydown="if(event.key==='Enter')savePanelRename(${item.id});if(event.key==='Escape')hidePanelRename(${item.id});">
+                    <div class="edit-panel-rename-actions">
+                        <button class="ep-save-btn" onclick="savePanelRename(${item.id})">Save</button>
+                        <button class="ep-cancel-btn" onclick="hidePanelRename(${item.id})">Cancel</button>
+                    </div>
+                </div>
+            </div>`;
+
+        } else if(item.type==='pdf'){
+            const name=item.name||'PDF';
+            wrapper.innerHTML=`
+            <div class="content-item">
+                ${dragHandle}
+                <div class="content-item-thumb" onclick="viewPDF(${item.id})"><i class="fas fa-file-pdf" style="color:#e57373;"></i></div>
+                <div class="content-item-info" onclick="viewPDF(${item.id})">
+                    <div class="content-item-name" id="nameDisplay_${item.id}">${escHtml(name)}</div>
+                    <div class="content-item-meta">PDF DOCUMENT</div>
+                </div>
+                <div class="content-item-actions">
+                    <button class="content-action-btn" title="Edit" id="editBtn_${item.id}" onclick="toggleEditPanel(${item.id},'pdf');event.stopPropagation();" ontouchend="requestAnimationFrame(()=>{this.blur();this.style.background='';});"><i class="fas fa-edit"></i></button>
+                    <button class="content-action-btn delete" title="Delete" onclick="deleteContent(${item.id});event.stopPropagation();" ontouchend="requestAnimationFrame(()=>{this.blur();this.style.background='';});"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="content-item-chevron" onclick="viewPDF(${item.id})"><i class="fas fa-chevron-right"></i></div>
+            </div>
+            <div class="edit-action-panel" id="editPanel_${item.id}">
+                <button class="edit-panel-btn" onclick="showPanelRename(${item.id})"><i class="fas fa-font"></i> Rename</button>
+                <label class="edit-panel-btn" style="cursor:pointer;"><i class="fas fa-upload"></i> Replace PDF
+                    <input type="file" accept="application/pdf" style="display:none;" onchange="replacePDF(${item.id},this);closeEditPanel(${item.id});">
+                </label>
+                <div class="edit-panel-rename-row" id="panelRenameRow_${item.id}">
+                    <input class="edit-panel-rename-input" id="panelRenameInput_${item.id}" value="${escAttr(name)}" placeholder="Enter new name…"
+                        onkeydown="if(event.key==='Enter')savePanelRename(${item.id});if(event.key==='Escape')hidePanelRename(${item.id});">
+                    <div class="edit-panel-rename-actions">
+                        <button class="ep-save-btn" onclick="savePanelRename(${item.id})">Save</button>
+                        <button class="ep-cancel-btn" onclick="hidePanelRename(${item.id})">Cancel</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+        container.appendChild(wrapper);
+        const delay=idx*18;
+        setTimeout(()=>{wrapper.style.opacity='1';wrapper.style.transform='translateY(0)';},delay);
+        setupContentItemDrag(wrapper, container);
+    });
+}
+
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escAttr(s){return String(s).replace(/"/g,'&quot;');}
+
+// ── Edit Action Panel (Rename + Replace) ───────────────────────────────────────
+let _openPanelId=null;
+function toggleEditPanel(id, type){
+    const panel=document.getElementById(`editPanel_${id}`);
+    if(!panel)return;
+    const isOpen=panel.classList.contains('open');
+    // Close any open panels and reset all edit button states
+    document.querySelectorAll('.edit-action-panel.open').forEach(p=>p.classList.remove('open'));
+    document.querySelectorAll('.edit-panel-rename-row.show').forEach(r=>r.classList.remove('show'));
+    document.querySelectorAll('.content-action-btn').forEach(b=>{
+        b.classList.remove('panel-open');
+        b.blur();
+        b.style.background='';
+        b.style.color='';
+        b.style.boxShadow='';
+        b.style.outline='';
+    });
+    _openPanelId=null;
+    if(!isOpen){
+        panel.classList.add('open');
+        _openPanelId=id;
+        const btn=document.getElementById(`editBtn_${id}`);
+        if(btn){btn.classList.add('panel-open');requestAnimationFrame(()=>btn.blur());}
+    }
+}
+function closeEditPanel(id){
+    const panel=document.getElementById(`editPanel_${id}`);
+    if(panel)panel.classList.remove('open');
+    const row=document.getElementById(`panelRenameRow_${id}`);
+    if(row)row.classList.remove('show');
+    if(_openPanelId===id)_openPanelId=null;
+    // Fully reset all edit button active/focus/glow states
+    document.querySelectorAll('.content-action-btn').forEach(b=>{
+        b.classList.remove('panel-open');
+        b.blur();
+        b.style.background='';
+        b.style.color='';
+        b.style.boxShadow='';
+        b.style.outline='';
+    });
+}
+function showPanelRename(id){
+    const row=document.getElementById(`panelRenameRow_${id}`);
+    if(!row)return;
+    row.classList.add('show');
+    const inp=document.getElementById(`panelRenameInput_${id}`);
+    if(inp){inp.focus();inp.select();}
+}
+function hidePanelRename(id){
+    const row=document.getElementById(`panelRenameRow_${id}`);
+    if(row)row.classList.remove('show');
+}
+function savePanelRename(id){
+    const inp=document.getElementById(`panelRenameInput_${id}`);if(!inp)return;
+    const newName=inp.value.trim();if(!newName)return;
+    const tx=db.transaction(['content'],'readwrite');const store=tx.objectStore('content');
+    store.get(id).onsuccess=e=>{const item=e.target.result;item.name=newName;store.put(item);};
+    tx.oncomplete=()=>{closeEditPanel(id);loadContent();};
+}
+
+// ── Text note panel → Edit Content option ─────────────────────────────────────
+function showPanelTextEdit(id){
+    closeEditPanel(id);
+    const inline=document.getElementById(`textInline_${id}`);
+    const body=document.getElementById(`textBody_${id}`);
+    const editArea=document.getElementById(`textEdit_${id}`);
+    const actions=document.getElementById(`textEditActions_${id}`);
+    if(!inline)return;
+    inline.style.display='block';
+    body.style.display='none';
+    editArea.style.display='block';
+    actions.style.display='flex';
+    editArea.focus();
+}
+
+// ── Inline text note expand/edit ───────────────────────────────────────────────
+function toggleTextNoteExpand(id){
+    const inline=document.getElementById(`textInline_${id}`);
+    if(!inline)return;
+    inline.style.display=inline.style.display==='none'?'block':'none';
+}
+function toggleInlineTextEdit(id){
+    const inline=document.getElementById(`textInline_${id}`);
+    const body=document.getElementById(`textBody_${id}`);
+    const editArea=document.getElementById(`textEdit_${id}`);
+    const actions=document.getElementById(`textEditActions_${id}`);
+    if(!inline)return;
+    inline.style.display='block';
+    body.style.display='none';
+    editArea.style.display='block';
+    actions.style.display='flex';
+    editArea.focus();
+}
+function saveInlineText(id){
+    const editArea=document.getElementById(`textEdit_${id}`);if(!editArea)return;
+    const newContent=editArea.value;
+    const tx=db.transaction(['content'],'readwrite');const store=tx.objectStore('content');
+    store.get(id).onsuccess=e=>{const item=e.target.result;item.content=newContent;store.put(item);};
+    tx.oncomplete=()=>loadContent();
+}
+function cancelInlineText(id){
+    const inline=document.getElementById(`textInline_${id}`);
+    const body=document.getElementById(`textBody_${id}`);
+    const editArea=document.getElementById(`textEdit_${id}`);
+    const actions=document.getElementById(`textEditActions_${id}`);
+    if(body)body.style.display='block';
+    if(editArea)editArea.style.display='none';
+    if(actions)actions.style.display='none';
+}
+
+// ── Replace image / PDF ────────────────────────────────────────────────────────
+async function replaceImage(id,input){
+    const file=input.files[0];if(!file)return;
+    const data=await fileToBase64(file);
+    const tx=db.transaction(['content'],'readwrite');const store=tx.objectStore('content');
+    store.get(id).onsuccess=e=>{const item=e.target.result;item.content=data;store.put(item);};
+    tx.oncomplete=()=>loadContent();
+}
+async function replacePDF(id,input){
+    const file=input.files[0];if(!file)return;
+    const data=await fileToBase64(file);
+    const tx=db.transaction(['content'],'readwrite');const store=tx.objectStore('content');
+    store.get(id).onsuccess=e=>{const item=e.target.result;item.content=data;store.put(item);};
+    tx.oncomplete=()=>loadContent();
+}
+
+// ── Text Note: inline card viewer ─────────────────────────────────────────────
+function viewTextNote(id) {
+    const tx=db.transaction(['content'],'readonly');
+    tx.objectStore('content').get(id).onsuccess=e=>{
+        document.getElementById('viewTextBody').textContent=e.target.result.content;
+        document.getElementById('viewTextModal').classList.add('show');
+    };
+}
+
+// ── Content Management ─────────────────────────────────────────────────────────
+function openAddContentMenu()  {document.getElementById('addContentMenuModal').classList.add('show');}
+function closeAddContentMenu() {document.getElementById('addContentMenuModal').classList.remove('show');}
+function openAddTextModal()    {closeAddContentMenu();editingContentId=null;document.getElementById('textModalTitle').textContent='Add Text Note';document.getElementById('textBtnText').textContent='Add Note';document.getElementById('textContent').value='';document.getElementById('textNoteTitle').value='';document.getElementById('addTextModal').classList.add('show');}
+function closeAddTextModal()   {document.getElementById('addTextModal').classList.remove('show');}
+
+async function saveTextContent(event) {
+    event.preventDefault();
+    const content=document.getElementById('textContent').value;
+    const titleInput=(document.getElementById('textNoteTitle').value||'').trim();
+    const name=titleInput||null;
+    if(editingContentId){
+        const tx=db.transaction(['content'],'readwrite');const store=tx.objectStore('content');
+        store.get(editingContentId).onsuccess=e=>{const item=e.target.result;item.content=content;if(name)item.name=name;store.put(item);};
+        tx.oncomplete=()=>{closeAddTextModal();loadContent();};
+    }else{
+        const order=await getNextOrder();
+        const tx=db.transaction(['content'],'readwrite');
+        tx.objectStore('content').add({subjectId:currentSubjectId,type:'text',content,name,order,createdAt:new Date().toISOString()});
+        tx.oncomplete=()=>{closeAddTextModal();loadContent();};
+    }
+}
+
+function openAddImageModal(){closeAddContentMenu();document.getElementById('contentImage').value='';document.getElementById('imageName').value='';document.getElementById('contentImagePreview').style.display='none';document.getElementById('addImageModal').classList.add('show');}
+function closeAddImageModal(){document.getElementById('addImageModal').classList.remove('show');}
+function previewContentImage(){const f=document.getElementById('contentImage').files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const p=document.getElementById('contentImagePreview');p.src=e.target.result;p.style.display='block';};r.readAsDataURL(f);}
+
+async function saveImageContent(event) {
+    event.preventDefault();
+    const imageFile=document.getElementById('contentImage').files[0];const name=document.getElementById('imageName').value;
+    if(!imageFile){alert('Please select an image');return;}
+    const imageData=await fileToBase64(imageFile);const order=await getNextOrder();
+    const tx=db.transaction(['content'],'readwrite');
+    tx.objectStore('content').add({subjectId:currentSubjectId,type:'image',content:imageData,name,order,createdAt:new Date().toISOString()});
+    tx.oncomplete=()=>{closeAddImageModal();loadContent();};
+}
+
+function openAddPDFModal(){closeAddContentMenu();document.getElementById('contentPDF').value='';document.getElementById('pdfName').value='';document.getElementById('addPDFModal').classList.add('show');}
+function closeAddPDFModal(){document.getElementById('addPDFModal').classList.remove('show');}
+function updatePDFName(){const f=document.getElementById('contentPDF').files[0];if(f&&!document.getElementById('pdfName').value)document.getElementById('pdfName').value=f.name.replace('.pdf','');}
+
+async function savePDFContent(event) {
+    event.preventDefault();
+    const pdfFile=document.getElementById('contentPDF').files[0];const name=document.getElementById('pdfName').value;
+    if(!pdfFile){alert('Please select a PDF');return;}
+    const pdfData=await fileToBase64(pdfFile);const order=await getNextOrder();
+    const tx=db.transaction(['content'],'readwrite');
+    tx.objectStore('content').add({subjectId:currentSubjectId,type:'pdf',content:pdfData,name,order,createdAt:new Date().toISOString()});
+    tx.oncomplete=()=>{closeAddPDFModal();loadContent();};
+}
+
+function deleteContent(id){showConfirmDialog('Delete Item','Are you sure?','Delete',()=>{const tx=db.transaction(['content'],'readwrite');tx.objectStore('content').delete(id);tx.oncomplete=()=>loadContent();});}
+
+// ── Content Item Drag and Drop ─────────────────────────────────────────────────
+function setupContentItemDrag(wrapper, container){
+    const handle=wrapper.querySelector('.drag-handle');
+    if(!handle)return;
+
+    // Desktop drag
+    handle.addEventListener('mousedown', e=>{
+        wrapper.setAttribute('draggable','true');
+    });
+    wrapper.addEventListener('dragstart', e=>{
+        e.dataTransfer.effectAllowed='move';
+        e.dataTransfer.setData('text/plain', wrapper.getAttribute('data-id'));
+        wrapper.classList.add('dragging');
+    });
+    wrapper.addEventListener('dragend', ()=>{
+        wrapper.classList.remove('dragging');
+        wrapper.setAttribute('draggable','false');
+        wrapper.style.transform='';
+        wrapper.style.opacity='';
+        document.querySelectorAll('.content-item-wrapper.drag-over-top,.content-item-wrapper.drag-over-bottom').forEach(el=>{el.classList.remove('drag-over-top','drag-over-bottom');});
+        saveContentOrder();
+    });
+    wrapper.addEventListener('dragover', e=>{
+        e.preventDefault();
+        document.querySelectorAll('.content-item-wrapper.drag-over-top,.content-item-wrapper.drag-over-bottom').forEach(el=>{el.classList.remove('drag-over-top','drag-over-bottom');});
+        const rect=wrapper.getBoundingClientRect();
+        const mid=rect.top+rect.height/2;
+        if(e.clientY<mid) wrapper.classList.add('drag-over-top');
+        else wrapper.classList.add('drag-over-bottom');
+    });
+    wrapper.addEventListener('dragleave', ()=>{
+        wrapper.classList.remove('drag-over-top','drag-over-bottom');
+    });
+    wrapper.addEventListener('drop', e=>{
+        e.preventDefault();
+        wrapper.classList.remove('drag-over-top','drag-over-bottom');
+        const fromId=e.dataTransfer.getData('text/plain');
+        const toId=wrapper.getAttribute('data-id');
+        if(fromId===toId)return;
+        const fromEl=container.querySelector(`[data-id="${fromId}"]`);
+        if(!fromEl)return;
+        const rect=wrapper.getBoundingClientRect();
+        const mid=rect.top+rect.height/2;
+        if(e.clientY<mid) container.insertBefore(fromEl, wrapper);
+        else container.insertBefore(fromEl, wrapper.nextSibling);
+        saveContentOrder();
+    });
+
+    // Touch drag
+    let touchDragging=false, ghost=null, lastOver=null, startScrollY=0;
+    handle.addEventListener('touchstart', e=>{
+        e.preventDefault(); // CRITICAL: prevent browser context menu/callout
+        e.stopPropagation();
+        const t=e.touches[0];
+        startScrollY=window.scrollY;
+        touchDragging=true;
+        wrapper.classList.add('dragging');
+        ghost=wrapper.cloneNode(true);
+        ghost.style.cssText=`position:fixed;z-index:9999;opacity:0.8;pointer-events:none;width:${wrapper.offsetWidth}px;left:0;background:#111;border-radius:8px;transition:none;`;
+        ghost.style.top=(t.clientY-20)+'px';
+        document.body.appendChild(ghost);
+    },{passive:false});
+    handle.addEventListener('touchmove', e=>{
+        if(!touchDragging||!ghost)return;
+        e.preventDefault();
+        const t=e.touches[0];
+        ghost.style.top=(t.clientY-20)+'px';
+        ghost.style.display='none';
+        const el=document.elementFromPoint(t.clientX, t.clientY);
+        ghost.style.display='';
+        const overWrapper=el?el.closest('.content-item-wrapper'):null;
+        if(lastOver&&lastOver!==wrapper) lastOver.classList.remove('drag-over-top','drag-over-bottom');
+        if(overWrapper&&overWrapper!==wrapper){
+            const rect=overWrapper.getBoundingClientRect();
+            const mid=rect.top+rect.height/2;
+            overWrapper.classList.remove('drag-over-top','drag-over-bottom');
+            if(t.clientY<mid) overWrapper.classList.add('drag-over-top');
+            else overWrapper.classList.add('drag-over-bottom');
+            lastOver=overWrapper;
+        }
+    },{passive:false});
+
+    const endContentTouchDrag = (e) => {
+        if(!touchDragging)return;
+        touchDragging=false;
+        if(ghost){ghost.remove();ghost=null;}
+        wrapper.classList.remove('dragging');
+        wrapper.style.transform='';
+        wrapper.style.opacity='';
+        if(lastOver){
+            lastOver.classList.remove('drag-over-top','drag-over-bottom');
+            const changedTouch = e.changedTouches ? e.changedTouches[0] : null;
+            const rect=lastOver.getBoundingClientRect();
+            const clientY = changedTouch ? changedTouch.clientY : rect.top;
+            const mid=rect.top+rect.height/2;
+            if(clientY<mid) container.insertBefore(wrapper, lastOver);
+            else container.insertBefore(wrapper, lastOver.nextSibling);
+            lastOver=null;
+            saveContentOrder();
+        }
+        // Clean up any stray drag-over indicators
+        document.querySelectorAll('.content-item-wrapper.drag-over-top,.content-item-wrapper.drag-over-bottom').forEach(el=>{
+            el.classList.remove('drag-over-top','drag-over-bottom');
+        });
+    };
+    handle.addEventListener('touchend', endContentTouchDrag, {passive:true});
+    handle.addEventListener('touchcancel', endContentTouchDrag, {passive:true});
+}
+
+function saveContentOrder(){
+    try {
+    const container=document.getElementById('contentItems');
+    if(!container||!currentSubjectId)return;
+    const ids=[...container.querySelectorAll('.content-item-wrapper')].map(w=>parseInt(w.getAttribute('data-id')));
+    const tx=db.transaction(['content'],'readwrite');const store=tx.objectStore('content');
+    ids.forEach((id,idx)=>{
+        store.get(id).onsuccess=e=>{if(e.target.result){const item=e.target.result;item.order=idx;store.put(item);}};
+    });
+    } catch(e) {}
+}
+
+function moveContent(id,direction){
+    const tx=db.transaction(['content'],'readonly');
+    tx.objectStore('content').index('subjectId').getAll(IDBKeyRange.only(currentSubjectId)).onsuccess=e=>{
+        const items=e.target.result.sort((a,b)=>a.order-b.order);const idx=items.findIndex(i=>i.id===id);if(idx===-1)return;
+        if(direction==='up'&&idx>0){const t=items[idx].order;items[idx].order=items[idx-1].order;items[idx-1].order=t;updateItems([items[idx],items[idx-1]]);}
+        else if(direction==='down'&&idx<items.length-1){const t=items[idx].order;items[idx].order=items[idx+1].order;items[idx+1].order=t;updateItems([items[idx],items[idx+1]]);}
+    };
+}
+function updateItems(items){const tx=db.transaction(['content'],'readwrite');const s=tx.objectStore('content');items.forEach(i=>s.put(i));tx.oncomplete=()=>loadContent();}
+
+function viewImage(src){document.getElementById('viewImageContent').src=src;document.getElementById('viewImageModal').classList.add('show');}
+function closeViewImageModal(){document.getElementById('viewImageModal').classList.remove('show');}
+function viewPDF(id){
+    const tx=db.transaction(['content'],'readonly');
+    tx.objectStore('content').get(id).onsuccess=e=>{
+        try {
+            const blob=base64ToBlob(e.target.result.content,'application/pdf');
+            const url=URL.createObjectURL(blob);
+            // Try window.open first; fallback to in-app viewer for WebView
+            var newWin=null;
+            try { newWin=window.open(url,'_blank'); } catch(err){}
+            if(!newWin||newWin.closed||typeof newWin.closed==='undefined'){
+                // WebView fallback: show PDF in an animated overlay
+                var overlay=document.getElementById('pdfViewerOverlay');
+                if(!overlay){
+                    overlay=document.createElement('div');
+                    overlay.id='pdfViewerOverlay';
+                    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:#000;z-index:9999;display:flex;flex-direction:column;opacity:0;transform:translateY(18px);transition:opacity 0.28s cubic-bezier(0.4,0,0.2,1),transform 0.28s cubic-bezier(0.4,0,0.2,1);will-change:opacity,transform;';
+                    overlay.innerHTML='<div style="display:flex;align-items:center;padding:12px 16px;padding-top:calc(env(safe-area-inset-top,28px) + 12px);background:#111;border-bottom:1px solid #222;flex-shrink:0;">'
+                        +'<button onclick="closePDFViewer()" style="background:none;border:none;color:#fff;font-size:1.2rem;padding:4px 12px 4px 0;cursor:pointer;min-width:44px;min-height:44px;display:flex;align-items:center;"><i class="fas fa-arrow-left"></i></button>'
+                        +'<span style="color:#fff;font-size:0.95rem;font-weight:600;">PDF Document</span></div>'
+                        +'<iframe id="pdfViewerFrame" style="flex:1;border:none;width:100%;background:#fff;opacity:0;transition:opacity 0.22s ease 0.18s;" src=""></iframe>';
+                    document.body.appendChild(overlay);
+                }
+                overlay.style.display='flex';
+                // Animate in on next frame
+                requestAnimationFrame(()=>{
+                    requestAnimationFrame(()=>{
+                        overlay.style.opacity='1';
+                        overlay.style.transform='translateY(0)';
+                        var frame=document.getElementById('pdfViewerFrame');
+                        if(frame){ frame.src=url; frame.onload=function(){frame.style.opacity='1';}; }
+                    });
+                });
+            }
+        } catch(err) {}
+    };
+}
+function closePDFViewer(){
+    var overlay=document.getElementById('pdfViewerOverlay');
+    if(!overlay)return;
+    overlay.style.opacity='0';
+    overlay.style.transform='translateY(18px)';
+    setTimeout(function(){
+        if(overlay){overlay.style.display='none';var f=document.getElementById('pdfViewerFrame');if(f){f.src='';f.style.opacity='0';}}
+    },280);
+}
+
+// ── Materials Page ─────────────────────────────────────────────────────────────
+function searchMaterials(){currentSearchQuery=document.getElementById('materialsSearch').value.toLowerCase().trim();loadMaterials();}
+
+function buildFilterChips(subjects){
+    const wrap=document.getElementById('materialsFilterChips');wrap.innerHTML='';
+    const all=document.createElement('button');all.className='filter-chip'+(activeFilterId===null?' active':'');all.textContent='All';all.onclick=()=>{activeFilterId=null;loadMaterials();};wrap.appendChild(all);
+    subjects.forEach(s=>{const chip=document.createElement('button');chip.className='filter-chip'+(activeFilterId===s.id?' active':'');chip.textContent=s.title;chip.onclick=()=>{activeFilterId=(activeFilterId===s.id)?null:s.id;loadMaterials();};wrap.appendChild(chip);});
+}
+
+function editMaterialsTitle(){const t=prompt('Edit title:',document.getElementById('materialsPageTitle').textContent);if(t&&t.trim()){document.getElementById('materialsPageTitle').textContent=t.trim();try{localStorage.setItem('materialsPageTitle',t.trim());}catch(e){}}}
+function loadMaterialsTitle(){try{const t=localStorage.getItem('materialsPageTitle');if(t)document.getElementById('materialsPageTitle').textContent=t;}catch(e){}}
+function startHomeTitleEdit(){
+    const title=document.getElementById('homePageTitle');
+    const input=document.getElementById('homePageTitleInput');
+    input.value=title.textContent;
+    title.style.display='none';
+    input.style.display='block';
+    input.focus();input.select();
+}
+function saveHomeTitleEdit(){
+    const title=document.getElementById('homePageTitle');
+    const input=document.getElementById('homePageTitleInput');
+    const val=input.value.trim();
+    if(val){title.textContent=val;try{localStorage.setItem('homePageTitle',val);}catch(e){}}
+    input.style.display='none';
+    title.style.display='';
+}
+function cancelHomeTitleEdit(){
+    const title=document.getElementById('homePageTitle');
+    const input=document.getElementById('homePageTitleInput');
+    input.style.display='none';
+    title.style.display='';
+}
+function loadHomeTitle(){try{const t=localStorage.getItem('homePageTitle');if(t)document.getElementById('homePageTitle').textContent=t;}catch(e){}}
+
+let _loadMaterialsToken = 0;
+async function loadMaterials(){
+    const token = ++_loadMaterialsToken;
+    const mc=document.getElementById('materialsContent');const em=document.getElementById('emptyMaterials');
+    if(!mc||!em)return;
+    mc.innerHTML='';mc.appendChild(em);em.style.display='none';
+    const allSubjects=await new Promise(resolve=>{const tx=db.transaction(['subjects'],'readonly');tx.objectStore('subjects').getAll().onsuccess=e=>resolve(e.target.result);});
+    if(token!==_loadMaterialsToken)return;
+    buildFilterChips(allSubjects);
+    const toShow=activeFilterId===null?allSubjects:allSubjects.filter(s=>s.id===activeFilterId);
+    if(!toShow.length){em.style.display='block';em.innerHTML='<i class="fas fa-folder-open"></i><p>No subjects found</p>';return;}
+    let totalFound=0;
+    const seenIds=new Set();
+    for(const subject of toShow){
+        let materials=await new Promise(resolve=>{const tx=db.transaction(['content'],'readonly');tx.objectStore('content').index('subjectId').getAll(IDBKeyRange.only(subject.id)).onsuccess=e=>resolve(e.target.result);});
+        if(token!==_loadMaterialsToken)return;
+        materials=materials.filter(item=>{if(seenIds.has(item.id))return false;seenIds.add(item.id);return true;});
+        if(currentSearchQuery) materials=materials.filter(item=>(item.name||'').toLowerCase().includes(currentSearchQuery)||(item.type==='text'&&(item.content||'').toLowerCase().includes(currentSearchQuery)));
+        if(!materials.length)continue;
+        totalFound+=materials.length;
+        const section=document.createElement('div');section.className='material-section';
+        section.style.cssText='opacity:0;transform:translateY(6px);transition:opacity 0.18s ease,transform 0.18s ease;';
+        section.innerHTML=`<div class="material-section-header"><div class="material-section-title">${subject.title}</div></div><div class="material-list" id="materialList${subject.id}"></div>`;
+        mc.appendChild(section);
+        const list=section.querySelector(`#materialList${subject.id}`);
+        materials.forEach(m=>list.appendChild(createMaterialItem(m,subject.title)));
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{section.style.opacity='1';section.style.transform='translateY(0)';}));
+    }
+    if(!totalFound){em.style.display='block';em.innerHTML=currentSearchQuery?'<i class="fas fa-search"></i><p>No materials found</p><p style="font-size:0.8rem;color:#444;">Try a different search term</p>':'<i class="fas fa-folder-open"></i><p>No materials yet</p><p style="font-size:0.8rem;color:#444;">Click + in Home to add content</p>';}
+}
+
+function createMaterialItem(item,subjectTitle){
+    const div=document.createElement('div');div.className='material-item';
+    let icon='<i class="fas fa-file-alt"></i>',cls='',click='';
+    if(item.type==='pdf')  {icon='<i class="fas fa-file-pdf"></i>';cls='pdf';click=`onclick="viewPDF(${item.id})"`;}
+    if(item.type==='image'){icon='<i class="fas fa-image"></i>';cls='image';click=`onclick="viewImage('${item.content}')"` ;}
+    if(item.type==='text') {click=`onclick="viewTextNote(${item.id})"`;}
+    const name=item.name||(item.type==='text'?'Text Note':'Untitled');
+    const meta=item.type.charAt(0).toUpperCase()+item.type.slice(1)+' &middot; '+subjectTitle;
+    div.innerHTML=`
+        <div class="material-icon ${cls}" ${click}>${icon}</div>
+        <div class="material-info" ${click}><div class="material-name">${name}</div><div class="material-meta">${meta}</div></div>
+        <div class="material-actions">
+            <button class="material-action-btn" onclick="renameMaterial(${item.id});event.stopPropagation();"><i class="fas fa-edit"></i></button>
+            <button class="material-action-btn" onclick="openMaterialActionPopup(${item.id},event);event.stopPropagation();"><i class="fas fa-arrow-right"></i></button>
+            <button class="material-action-btn delete" onclick="deleteMaterial(${item.id});event.stopPropagation();"><i class="fas fa-trash"></i></button>
+        </div>
+        <div class="material-chevron" ${click}><i class="fas fa-chevron-right"></i></div>`;
+    return div;
+}
+
+function openSubjectToAddMaterial(subjectId){showView('home');setTimeout(()=>{const tx=db.transaction(['subjects'],'readonly');tx.objectStore('subjects').get(subjectId).onsuccess=e=>{openSubject(subjectId,e.target.result.title);setTimeout(()=>openAddContentMenu(),300);};},100);}
+let _renameMaterialId = null;
+function renameMaterial(id){
+    _renameMaterialId=id;
+    const tx=db.transaction(['content'],'readonly');tx.objectStore('content').get(id).onsuccess=e=>{
+        const item=e.target.result;
+        const inp=document.getElementById('renameMaterialInput');
+        inp.value=item.name||(item.type==='text'?'Text Note':'Untitled');
+        document.getElementById('renameMaterialModal').classList.add('show');
+        // Defer focus so modal is visible first
+        setTimeout(()=>{inp.focus();inp.select();},80);
+    };
+}
+function closeRenameMaterialModal(){
+    document.getElementById('renameMaterialModal').classList.remove('show');
+    document.getElementById('renameMaterialInput').value='';
+    _renameMaterialId=null;
+    // Remove any active/focus state from all material action buttons
+    document.querySelectorAll('.material-action-btn').forEach(b=>{b.blur();});
+}
+function saveRenameMaterial(){
+    const inp=document.getElementById('renameMaterialInput');
+    const n=inp.value.trim();
+    if(!n){closeRenameMaterialModal();return;}
+    const id=_renameMaterialId;
+    closeRenameMaterialModal();
+    if(!id)return;
+    const tx=db.transaction(['content'],'readwrite');const store=tx.objectStore('content');
+    store.get(id).onsuccess=e=>{const item=e.target.result;item.name=n;store.put(item);};
+    tx.oncomplete=()=>loadMaterials();
+}function deleteMaterial(id){showConfirmDialog('Delete Material','Are you sure?','Delete',()=>{const tx=db.transaction(['content'],'readwrite');tx.objectStore('content').delete(id);tx.oncomplete=()=>loadMaterials();});}
+
+function openMoveMaterialModal(id){movingMaterialId=id;openSubjectSelectorModal('Move to Subject','move');}
+function closeMoveMaterialModal(){closeSubjectSelectorModal();movingMaterialId=null;}
+function confirmMoveMaterial(){
+    const newId=_subjectSelectorSelectedId;
+    if(!newId||!movingMaterialId)return;
+    const tx=db.transaction(['content'],'readwrite');const store=tx.objectStore('content');
+    store.get(movingMaterialId).onsuccess=e=>{const item=e.target.result;item.subjectId=newId;store.put(item);};
+    tx.oncomplete=()=>{closeSubjectSelectorModal();movingMaterialId=null;loadMaterials();};
+}
+
+// ── Material Action Popup ─────────────────────────────────────────────────────
+let _materialActionTargetId = null;
+function openMaterialActionPopup(id, e){
+    _materialActionTargetId=id;
+    const popup=document.getElementById('materialActionPopup');
+    const menu=document.getElementById('materialActionPopupMenu');
+    popup.classList.add('open');
+    // Position near the tapped button
+    const rect=e.currentTarget.getBoundingClientRect();
+    const menuW=220;
+    let left=rect.right-menuW;
+    if(left<8)left=8;
+    if(left+menuW>window.innerWidth-8)left=window.innerWidth-menuW-8;
+    let top=rect.bottom+6;
+    if(top+160>window.innerHeight-20)top=rect.top-166;
+    menu.style.left=left+'px';
+    menu.style.top=top+'px';
+}
+function closeMaterialActionPopup(){
+    document.getElementById('materialActionPopup').classList.remove('open');
+}
+
+// ── Copy Material ─────────────────────────────────────────────────────────────
+let _copyingMaterialId = null;
+function openCopyMaterialModal(){
+    _copyingMaterialId=_materialActionTargetId;
+    openSubjectSelectorModal('Copy to Subject','copy');
+}
+async function confirmCopyMaterial(){
+    const newSubjectId=_subjectSelectorSelectedId;
+    if(!newSubjectId||!_copyingMaterialId)return;
+    const tx=db.transaction(['content'],'readonly');
+    tx.objectStore('content').get(_copyingMaterialId).onsuccess=async e=>{
+        const src=e.target.result;
+        // Get next order for target subject
+        const orderTx=db.transaction(['content'],'readonly');
+        orderTx.objectStore('content').index('subjectId').getAll(IDBKeyRange.only(newSubjectId)).onsuccess=ev=>{
+            const existing=ev.target.result;
+            const nextOrder=existing.length>0?Math.max(...existing.map(i=>i.order||0))+1:0;
+            const copy={
+                subjectId:newSubjectId,
+                type:src.type,
+                content:src.content,
+                name:src.name,
+                order:nextOrder,
+                createdAt:new Date().toISOString()
+            };
+            const writeTx=db.transaction(['content'],'readwrite');
+            writeTx.objectStore('content').add(copy);
+            writeTx.oncomplete=()=>{closeSubjectSelectorModal();_copyingMaterialId=null;loadMaterials();};
+        };
+    };
+}
+
+// ── Custom Subject Selector Modal ─────────────────────────────────────────────
+let _subjectSelectorMode = 'move'; // 'move' | 'copy'
+let _subjectSelectorSelectedId = null;
+function openSubjectSelectorModal(title, mode){
+    _subjectSelectorMode=mode;
+    _subjectSelectorSelectedId=null;
+    document.getElementById('subjectSelectorTitle').textContent=title;
+    document.getElementById('subjectSelectorConfirm').disabled=true;
+    const list=document.getElementById('subjectSelectorList');
+    list.innerHTML='';
+    const tx=db.transaction(['subjects'],'readonly');
+    tx.objectStore('subjects').getAll().onsuccess=e=>{
+        e.target.result.forEach(s=>{
+            const item=document.createElement('div');
+            item.className='subject-selector-item';
+            item.setAttribute('data-id',s.id);
+            item.innerHTML=`<span class="subject-selector-item-name">${escHtml(s.title)}</span><div class="subject-selector-item-check"></div>`;
+            item.addEventListener('click',()=>{
+                list.querySelectorAll('.subject-selector-item').forEach(i=>i.classList.remove('selected'));
+                item.classList.add('selected');
+                _subjectSelectorSelectedId=s.id;
+                document.getElementById('subjectSelectorConfirm').disabled=false;
+            });
+            list.appendChild(item);
+        });
+        document.getElementById('subjectSelectorModal').classList.add('show');
+    };
+}
+function closeSubjectSelectorModal(){
+    document.getElementById('subjectSelectorModal').classList.remove('show');
+    _subjectSelectorSelectedId=null;
+}
+function confirmSubjectSelector(){
+    if(!_subjectSelectorSelectedId)return;
+    if(_subjectSelectorMode==='move') confirmMoveMaterial();
+    else if(_subjectSelectorMode==='copy') confirmCopyMaterial();
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────────
+function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});}
+function base64ToBlob(base64,type){const b=atob(base64.split(',')[1]);const ab=new ArrayBuffer(b.length);const ia=new Uint8Array(ab);for(let i=0;i<b.length;i++)ia[i]=b.charCodeAt(i);return new Blob([ab],{type});}
+async function getNextOrder(){return new Promise(resolve=>{const tx=db.transaction(['content'],'readonly');tx.objectStore('content').index('subjectId').getAll(IDBKeyRange.only(currentSubjectId)).onsuccess=e=>{const items=e.target.result;resolve(items.length>0?Math.max(...items.map(i=>i.order||0))+1:0);};});}
+function defaultImg(){return 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27120%27 viewBox=%270 0 200 120%27%3E%3Crect fill=%27%23222%27 width=%27200%27 height=%27120%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 font-family=%27sans-serif%27 font-size=%2732%27 fill=%27%23444%27%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E';}
+
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
+// Rename material modal backdrop click
+document.getElementById('renameMaterialModal').addEventListener('click',function(e){if(e.target===this)closeRenameMaterialModal();});
+
+// Close edit panels when clicking outside
+document.addEventListener('click',e=>{
+    if(_openPanelId!==null&&!e.target.closest('.content-item-wrapper')){
+        document.querySelectorAll('.edit-action-panel.open').forEach(p=>p.classList.remove('open'));
+        document.querySelectorAll('.edit-panel-rename-row.show').forEach(r=>r.classList.remove('show'));
+        document.querySelectorAll('.content-action-btn').forEach(b=>{
+            b.classList.remove('panel-open');
+            b.blur();
+            b.style.background='';
+            b.style.color='';
+            b.style.boxShadow='';
+            b.style.outline='';
+        });
+        _openPanelId=null;
+    }
+    // Dismiss long-pressed subject cards when clicking outside
+    if(!e.target.closest('.subject-card')){
+        document.querySelectorAll('.subject-card.long-pressed').forEach(c=>c.classList.remove('long-pressed'));
+    }
+    // Dismiss material action popup when clicking outside
+    if(!e.target.closest('.material-action-popup-menu')&&!e.target.closest('.material-action-btn')){
+        const popup=document.getElementById('materialActionPopup');
+        if(popup&&popup.classList.contains('open'))popup.classList.remove('open');
+    }
+});
+
+// ── Header Edit Popup Menu ────────────────────────────────────────────────────
+function toggleHeaderEditMenu(e){
+    e.stopPropagation();
+    var popup=document.getElementById('headerEditPopup');
+    var menu=document.getElementById('headerEditPopupMenu');
+    var btn=document.getElementById('headerPencilBtn');
+    if(!popup||!menu||!btn)return;
+    if(popup.classList.contains('open')){closeHeaderEditMenu();return;}
+    // Position menu below pencil button
+    var rect=btn.getBoundingClientRect();
+    var menuW=230;
+    var left=Math.min(rect.right-menuW, window.innerWidth-menuW-8);
+    if(left<8)left=8;
+    var top=rect.bottom+6;
+    menu.style.right=(window.innerWidth-rect.right)+'px';
+    menu.style.left='auto';
+    menu.style.top=top+'px';
+    popup.classList.add('open');
+}
+function closeHeaderEditMenu(){
+    var popup=document.getElementById('headerEditPopup');
+    if(popup)popup.classList.remove('open');
+}
+function removeHeaderIcon(){
+    var img=document.getElementById('headerIconImg');
+    var def=document.getElementById('headerIconDefault');
+    if(img){img.src='';img.style.display='none';}
+    if(def)def.style.display='flex';
+    try{localStorage.removeItem('headerIconData');}catch(e){}
+}
+
+// ── Subject Edit Compact Popup ────────────────────────────────────────────────
+function closeSubjectEditPopup(){
+    document.getElementById('subjectEditPopup').classList.remove('open');
+    ['title','subtitle'].forEach(f=>hideSubjectEditInline(f));
+}
+
+// ── Edit Info Modal (Subject Folder Only) ─────────────────────────────────────
+function openEditInfoModal(){
+    if(!currentSubjectId)return;
+    const tx=db.transaction(['subjects'],'readonly');
+    tx.objectStore('subjects').get(currentSubjectId).onsuccess=e=>{
+        const s=e.target.result;
+        // Load from dedicated info fields ONLY — never reads global title/subtitle
+        document.getElementById('editInfoName').value=(s.subjectInfo!==undefined?s.subjectInfo:s.title)||'';
+        document.getElementById('editInfoCategory').value=(s.categoryInfo!==undefined?s.categoryInfo:(s.subjectInfo!==undefined?s.subjectInfo:s.title))||'';
+        document.getElementById('editInfoModal').classList.add('show');
+    };
+}
+function closeEditInfoModal(){
+    document.getElementById('editInfoModal').classList.remove('show');
+}
+function saveEditInfo(){
+    const nameVal=document.getElementById('editInfoName').value.trim();
+    const catVal=document.getElementById('editInfoCategory').value.trim();
+    if(!nameVal){closeEditInfoModal();return;}
+    const tx=db.transaction(['subjects'],'readwrite');const store=tx.objectStore('subjects');
+    store.get(currentSubjectId).onsuccess=e=>{
+        const s=e.target.result;
+        // ONLY write to dedicated info fields — title and subtitle are NEVER touched here
+        s.subjectInfo=nameVal;
+        s.categoryInfo=catVal||nameVal;
+        store.put(s);
+        tx.oncomplete=()=>{
+            closeEditInfoModal();
+            // Only refresh info rows display — hero title/subtitle/home cards untouched
+            buildInfoRows(s);
+        };
+    };
+}
+function toggleSubjectEditInline(field){
+    const row=document.getElementById('seInline'+field.charAt(0).toUpperCase()+field.slice(1));
+    if(!row)return;
+    const isOpen=row.classList.contains('show');
+    // Close all
+    ['title','subtitle'].forEach(f=>hideSubjectEditInline(f));
+    if(!isOpen){ row.classList.add('show'); const inp=document.getElementById('seInput'+field.charAt(0).toUpperCase()+field.slice(1)); if(inp){inp.focus();inp.select();} }
+}
+function hideSubjectEditInline(field){
+    const row=document.getElementById('seInline'+field.charAt(0).toUpperCase()+field.slice(1));
+    if(row)row.classList.remove('show');
+}
+function saveSubjectEditField(field){
+    const inp=document.getElementById('seInput'+field.charAt(0).toUpperCase()+field.slice(1));
+    if(!inp)return;
+    const val=inp.value.trim();
+    if(!val){hideSubjectEditInline(field);return;}
+    if(!window._seEdits)window._seEdits={};
+    window._seEdits[field]=val;
+    hideSubjectEditInline(field);
+    // Visual feedback: update hero titles live
+    if(field==='title'){
+        document.getElementById('subjectDetailTitle').textContent=val;
+        document.getElementById('detailHeaderTitle').textContent=val;
+    }
+    if(field==='subtitle') document.getElementById('subjectDetailSubtitle').textContent=val;
+    // Immediately persist title/subtitle to IndexedDB — subjectInfo/categoryInfo are NEVER touched here
+    _persistSubjectEdits(()=>{loadSubjects();if(currentView==='materials')loadMaterials();});
+}
+function previewSubjectEditImage(input){
+    const file=input.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+        window._seNewImageData=ev.target.result;
+        const prev=document.getElementById('seImagePreview');
+        prev.src=ev.target.result; prev.classList.add('show');
+        const row=document.getElementById('seInlineImage');
+        if(row)row.classList.add('show');
+    };
+    r.readAsDataURL(file);
+}
+function saveSubjectEditImage(){
+    if(window._seNewImageData){
+        if(!window._seEdits)window._seEdits={};
+        window._seEdits.image=window._seNewImageData;
+    }
+    hideSubjectEditInline('image');
+}
+function removeSubjectEditImage(){
+    if(!window._seEdits)window._seEdits={};
+    window._seEdits.image=null;
+    window._seNewImageData=null;
+    closeSubjectEditPopup();
+    // Save immediately
+    _persistSubjectEdits(()=>{loadSubjects();});
+}
+async function commitSubjectEditChanges(){
+    closeSubjectEditPopup();
+    _persistSubjectEdits(()=>{loadSubjects();if(currentView==='materials')loadMaterials();});
+}
+function _persistSubjectEdits(onDone){
+    if(!currentSubjectId||!window._seEdits)return;
+    const edits=window._seEdits;
+    const tx=db.transaction(['subjects'],'readwrite');const store=tx.objectStore('subjects');
+    store.get(currentSubjectId).onsuccess=e=>{
+        const s=e.target.result;
+        if(edits.title)s.title=edits.title;
+        if(edits.subtitle)s.subtitle=edits.subtitle;
+        if('image' in edits)s.image=edits.image;
+        store.put(s);
+        // Update info rows display
+        if(edits.title){document.getElementById('subjectDetailTitle').textContent=s.title;document.getElementById('detailHeaderTitle').textContent=s.title;}
+        if(edits.subtitle)document.getElementById('subjectDetailSubtitle').textContent=s.subtitle;
+        buildInfoRows(s);
+    };
+    tx.oncomplete=()=>{if(onDone)onDone();window._seEdits=null;window._seNewImageData=null;};
+}
+
+
+(function(){
+    var wrap = null;
+    var lpTimer = null;
+    var LP_DURATION = 600; // ms
+
+    function initHeaderIcon() {
+        wrap = document.getElementById('headerIconWrap');
+        if (!wrap) return;
+
+        // Restore saved icon
+        try {
+            var saved = localStorage.getItem('headerIconData');
+            if (saved) applyHeaderIconData(saved);
+        } catch(e){}
+
+        // Prevent all default context menus on the icon wrap
+        wrap.addEventListener('contextmenu', function(e){ e.preventDefault(); e.stopPropagation(); return false; }, true);
+
+        // Touch long-press
+        wrap.addEventListener('touchstart', function(e){
+            e.stopPropagation();
+            lpTimer = setTimeout(function(){ triggerIconPicker(); }, LP_DURATION);
+        }, {passive:true});
+        wrap.addEventListener('touchend', function(e){ clearTimeout(lpTimer); }, {passive:true});
+        wrap.addEventListener('touchcancel', function(e){ clearTimeout(lpTimer); }, {passive:true});
+        wrap.addEventListener('touchmove', function(e){ clearTimeout(lpTimer); }, {passive:true});
+
+        // Mouse long-press (desktop)
+        wrap.addEventListener('mousedown', function(e){
+            if (e.button !== 0) return;
+            lpTimer = setTimeout(function(){ triggerIconPicker(); }, LP_DURATION);
+        });
+        wrap.addEventListener('mouseup', function(){ clearTimeout(lpTimer); });
+        wrap.addEventListener('mouseleave', function(){ clearTimeout(lpTimer); });
+    }
+
+    function triggerIconPicker(){
+        var inp = document.getElementById('headerIconInput');
+        if (inp) inp.click();
+    }
+
+    window.applyHeaderIcon = function(input){
+        var file = input.files[0]; if(!file) return;
+        var r = new FileReader();
+        r.onload = function(ev){
+            var data = ev.target.result;
+            applyHeaderIconData(data);
+            try { localStorage.setItem('headerIconData', data); } catch(e){}
+        };
+        r.readAsDataURL(file);
+        input.value = '';
+    };
+
+    function applyHeaderIconData(data){
+        var img = document.getElementById('headerIconImg');
+        var def = document.getElementById('headerIconDefault');
+        if (!img || !def) return;
+        img.src = data;
+        img.style.display = 'block';
+        def.style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', initHeaderIcon);
+})();
+
+// ── Home nav handler: always exit search completely and go directly to home ──
+function homeNavHandler() {
+    // Clear home search state completely
+    const bar = document.getElementById('searchBar');
+    if (bar) {
+        bar.value = '';
+        bar.blur();
+    }
+    const clearBtn = document.getElementById('searchClearBtn');
+    if (clearBtn) clearBtn.classList.remove('visible');
+    // Clear materials search state completely
+    const mBar = document.getElementById('materialsSearch');
+    if (mBar) {
+        mBar.value = '';
+        mBar.blur();
+    }
+    const mClearBtn = document.getElementById('materialsSearchClearBtn');
+    if (mClearBtn) mClearBtn.classList.remove('visible');
+    currentSearchQuery = '';
+    // Hide subject detail if open
+    const detailView = document.getElementById('subjectDetailView');
+    if (detailView) detailView.classList.remove('show');
+    currentSubjectId = null;
+    // Show home, reload subjects unfiltered
+    showView('home');
+    loadSubjects();
+}
+
+// ── Search clear button ──────────────────────────────────────────────────────
+function toggleSearchClear(){
+    const bar=document.getElementById('searchBar');
+    const btn=document.getElementById('searchClearBtn');
+    if(!btn)return;
+    if(bar.value.length>0){
+        btn.classList.add('visible');
+    } else if(document.activeElement!==bar){
+        btn.classList.remove('visible');
+    }
+}
+function clearSearchBar(){
+    const bar=document.getElementById('searchBar');
+    const btn=document.getElementById('searchClearBtn');
+    bar.value='';
+    btn.classList.remove('visible');
+    bar.blur();
+    searchSubjects();
+}
+
+// ── Materials search clear button ────────────────────────────────────────────
+function toggleMaterialsSearchClear(){
+    const bar=document.getElementById('materialsSearch');
+    const btn=document.getElementById('materialsSearchClearBtn');
+    if(!btn)return;
+    if(bar.value.length>0){
+        btn.classList.add('visible');
+    } else if(document.activeElement!==bar){
+        btn.classList.remove('visible');
+        currentSearchQuery='';
+        loadMaterials();
+    }
+}
+function clearMaterialsSearch(){
+    const bar=document.getElementById('materialsSearch');
+    const btn=document.getElementById('materialsSearchClearBtn');
+    bar.value='';
+    btn.classList.remove('visible');
+    bar.blur();
+    currentSearchQuery='';
+    loadMaterials();
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js');
+}
+</script>
+</body>
+</html>
